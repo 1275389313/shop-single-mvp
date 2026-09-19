@@ -87,7 +87,7 @@ pnpm install
 pnpm dev
 ```
 
-`admin/.env.development` 里 `VITE_APP_BASE_API=http://127.0.0.1:8085`。浏览器打开 Vite 提示的地址（本仓库默认 **http://localhost:9527**）。
+`admin/.env.development` 里 `VITE_APP_BASE_API=http://127.0.0.1:8085`，本地图片前缀指向用户端 `http://127.0.0.1:8086/mall4j/img/`。浏览器打开 Vite 提示的地址（本仓库默认 **http://localhost:9527**）。
 
 导入 `05-patch-coupon.sql` 后请**重新登录**管理端，菜单才会出现「门店管理 → 优惠券」。`04-patch-phase3.sql` 为退款审核增加「确认收货退款」权限；未导入时，拥有审核权限的账号仍可确认退货（接口兼容 `order:refund:audit`）。
 
@@ -170,7 +170,7 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    - 管理端看不到优惠券菜单：未导入 `05-patch-coupon.sql`，或导入后未重新登录
    - 管理端看不到退款菜单：未导入 `03-patch-phase2.sql`，或导入后未重新登录
 
-H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.login`，用 **模拟微信登录**。
+H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.login`，用 **模拟微信登录**。
 
 ## Mock 微信登录 + Mock 支付
 

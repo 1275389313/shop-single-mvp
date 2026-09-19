@@ -81,7 +81,8 @@
         "template" : "index.html",
         "devServer" : {
             "disableHostCheck" : true,
-            "port" : 80
+            "https" : false,
+            "port" : 5173
         }
     },
     "uniStatistics" : {
