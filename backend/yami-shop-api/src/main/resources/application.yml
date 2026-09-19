@@ -56,3 +56,7 @@ shop-mvp:
     pay-mch-id: ${WX_PAY_MCH_ID:}
     pay-api-key: ${WX_PAY_API_KEY:}
     pay-notify-url: ${WX_PAY_NOTIFY_URL:}
+  kuaidi100:
+    customer: ${KUAIDI100_CUSTOMER:}
+    key: ${KUAIDI100_KEY:}
+    query-url: ${KUAIDI100_QUERY_URL:https://poll.kuaidi100.com/poll/query.do}

@@ -18,6 +18,7 @@ import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.google.common.base.Objects;
+import com.yami.shop.bean.app.dto.DeliveryDto;
 import com.yami.shop.bean.enums.OrderStatus;
 import com.yami.shop.bean.model.Order;
 import com.yami.shop.bean.model.OrderItem;
@@ -66,6 +67,9 @@ public class OrderController {
 
     @Autowired
     private SkuService skuService;
+
+    @Autowired
+    private DeliveryTrackingService deliveryTrackingService;
 
     /**
      * 分页获取
@@ -128,6 +132,13 @@ public class OrderController {
             skuService.removeSkuCacheBySkuId(orderItem.getSkuId(),orderItem.getProdId());
         }
         return ServerResponseEntity.success();
+    }
+
+    @GetMapping("/delivery/check")
+    @PreAuthorize("@pms.hasPermission('order:order:info')")
+    public ServerResponseEntity<DeliveryDto> deliveryCheck(@RequestParam("orderNumber") String orderNumber) {
+        Long shopId = SecurityUtils.getSysUser().getShopId();
+        return ServerResponseEntity.success(deliveryTrackingService.queryShipmentForShop(shopId, orderNumber));
     }
 
     /**

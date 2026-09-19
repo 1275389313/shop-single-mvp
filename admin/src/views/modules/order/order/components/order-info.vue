@@ -99,6 +99,14 @@
                     >
                       发货
                     </el-button>
+                    <el-button
+                      v-if="dataForm.dvyFlowId"
+                      type="primary"
+                      plain
+                      @click="loadTracking"
+                    >
+                      刷新物流
+                    </el-button>
                   </el-row>
                 </el-form-item>
               </div>
@@ -233,6 +241,59 @@
                   <span class="text">￥{{ dataForm.actualTotal }}</span>
                 </el-form-item>
               </div>
+              <div
+                v-if="dataForm.dvyFlowId"
+                class="tracking"
+              >
+                <div class="log-title">
+                  <span>发货物流</span>
+                  <el-tag
+                    v-if="tracking.mock"
+                    type="warning"
+                    size="small"
+                    style="margin-left: 8px;"
+                  >
+                    模拟轨迹
+                  </el-tag>
+                  <el-tag
+                    v-else-if="tracking.source === 'kuaidi100'"
+                    type="success"
+                    size="small"
+                    style="margin-left: 8px;"
+                  >
+                    快递100
+                  </el-tag>
+                </div>
+                <div class="tracking-meta">
+                  {{ tracking.companyName || '-' }} / {{ tracking.dvyFlowId || dataForm.dvyFlowId }}
+                  <span v-if="tracking.stateText">（{{ tracking.stateText }}）</span>
+                </div>
+                <el-alert
+                  v-if="tracking.message"
+                  :title="tracking.message"
+                  :type="tracking.mock ? 'warning' : 'info'"
+                  show-icon
+                  :closable="false"
+                  style="margin: 8px 0 12px;"
+                />
+                <el-timeline v-if="tracking.data && tracking.data.length">
+                  <el-timeline-item
+                    v-for="(item, index) in tracking.data"
+                    :key="index"
+                    :timestamp="item.time"
+                    placement="top"
+                    :type="index === 0 ? 'primary' : ''"
+                  >
+                    {{ item.context }}
+                  </el-timeline-item>
+                </el-timeline>
+                <div
+                  v-else
+                  class="tracking-empty"
+                >
+                  暂无轨迹
+                </div>
+              </div>
             </div>
           </div>
           <div class="order-log">
@@ -341,7 +402,24 @@ watch(
   }
 )
 
+const tracking = ref({})
 const dataFormRef = ref(null)
+
+const loadTracking = () => {
+  if (!dataForm.value.orderNumber || !dataForm.value.dvyFlowId) {
+    tracking.value = {}
+    return
+  }
+  http({
+    url: http.adornUrl('/order/order/delivery/check'),
+    method: 'get',
+    params: http.adornParams({ orderNumber: dataForm.value.orderNumber })
+  }).then(({ data }) => {
+    tracking.value = data || {}
+  }).catch(() => {
+    tracking.value = {}
+  })
+}
 const init = (orderNumber) => {
   dataForm.value.orderNumber = orderNumber || 0
   visible.value = true
@@ -357,6 +435,7 @@ const init = (orderNumber) => {
     })
       .then(({ data }) => {
         dataForm.value = data
+        loadTracking()
       })
   }
 }
@@ -370,6 +449,7 @@ const getDataList = () => {
   })
     .then(({ data }) => {
       dataForm.value = data
+      loadTracking()
     })
 }
 
@@ -501,6 +581,26 @@ const changeOrder = (orderNumber) => {
   }
   .log-cont {
     color: #4395ff;
+  }
+}
+.tracking {
+  margin: 16px 0 24px;
+  padding-top: 16px;
+  border-top: 1px dashed #e9eaec;
+  .log-title {
+    height: 40px;
+    line-height: 40px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+  }
+  .tracking-meta {
+    color: #666;
+    margin-bottom: 8px;
+  }
+  .tracking-empty {
+    color: #999;
+    padding: 8px 0;
   }
 }
 .item-list {

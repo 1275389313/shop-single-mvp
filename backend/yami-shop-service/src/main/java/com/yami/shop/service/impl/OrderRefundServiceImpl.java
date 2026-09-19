@@ -222,6 +222,19 @@ public class OrderRefundServiceImpl extends ServiceImpl<OrderRefundMapper, Order
         return refund;
     }
 
+    @Override
+    public OrderRefund getByRefundSn(String userId, String refundSn) {
+        OrderRefund refund = getOne(new LambdaQueryWrapper<OrderRefund>()
+                .eq(OrderRefund::getUserId, userId)
+                .eq(OrderRefund::getRefundSn, refundSn)
+                .last("limit 1"));
+        if (refund == null) {
+            throw new YamiShopBindException("退款单不存在");
+        }
+        RefundFlow.fill(refund);
+        return refund;
+    }
+
     private OrderRefund getOwnedRefund(Long shopId, Long refundId) {
         OrderRefund refund = getById(refundId);
         if (refund == null || !Objects.equals(refund.getShopId(), shopId)) {

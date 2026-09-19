@@ -150,6 +150,10 @@
         flex: 1;
         line-height: 48rpx;
       }
+      .item-txt.link {
+        color: #eb2444;
+        flex: 0 0 auto;
+      }
       .item-txt.remarks {
         max-width: 600rpx;
         white-space: nowrap;

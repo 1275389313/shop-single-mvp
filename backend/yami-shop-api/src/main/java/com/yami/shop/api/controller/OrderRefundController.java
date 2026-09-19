@@ -4,12 +4,14 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yami.shop.bean.app.param.OrderRefundExpressParam;
 import com.yami.shop.bean.app.param.OrderRefundParam;
+import com.yami.shop.bean.app.dto.DeliveryDto;
 import com.yami.shop.bean.model.Delivery;
 import com.yami.shop.bean.model.OrderRefund;
 import com.yami.shop.common.response.ServerResponseEntity;
 import com.yami.shop.common.util.PageParam;
 import com.yami.shop.security.api.util.SecurityUtils;
 import com.yami.shop.service.DeliveryService;
+import com.yami.shop.service.DeliveryTrackingService;
 import com.yami.shop.service.OrderRefundService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,6 +35,7 @@ public class OrderRefundController {
 
     private final OrderRefundService orderRefundService;
     private final DeliveryService deliveryService;
+    private final DeliveryTrackingService deliveryTrackingService;
 
     @PostMapping("/apply")
     @Operation(summary = "申请退款/退货退款（审核走后台）")
@@ -71,5 +74,12 @@ public class OrderRefundController {
     public ServerResponseEntity<OrderRefund> byOrder(@RequestParam String orderNumber) {
         String userId = SecurityUtils.getUser().getUserId();
         return ServerResponseEntity.success(orderRefundService.getByOrderNumber(userId, orderNumber));
+    }
+
+    @GetMapping("/delivery")
+    @Operation(summary = "查看退货物流轨迹", description = "按退款编号查询退货快递。无快递100密钥时返回模拟轨迹。")
+    public ServerResponseEntity<DeliveryDto> delivery(@RequestParam String refundSn) {
+        String userId = SecurityUtils.getUser().getUserId();
+        return ServerResponseEntity.success(deliveryTrackingService.queryReturnForUser(userId, refundSn));
     }
 }

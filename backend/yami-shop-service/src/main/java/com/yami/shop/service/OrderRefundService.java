@@ -30,4 +30,6 @@ public interface OrderRefundService extends IService<OrderRefund> {
     IPage<OrderRefund> pageByUser(String userId, PageParam<OrderRefund> page);
 
     OrderRefund getByOrderNumber(String userId, String orderNumber);
+
+    OrderRefund getByRefundSn(String userId, String refundSn);
 }

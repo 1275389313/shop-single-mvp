@@ -114,6 +114,20 @@
               {{ remarks }}
             </text>
           </view>
+          <view
+            v-if="dvyFlowId"
+            class="item"
+          >
+            <text class="item-tit">
+              发货物流：
+            </text>
+            <text
+              class="item-txt link"
+              @tap="toShipmentTrack"
+            >
+              {{ dvyFlowId }} 查看轨迹
+            </text>
+          </view>
         </view>
       </view>
 
@@ -218,6 +232,12 @@
             <text class="item-txt">
               {{ refund.expressName }} {{ refund.expressNo }}
             </text>
+            <text
+              class="item-txt link"
+              @tap="toReturnTrack"
+            >
+              查看轨迹
+            </text>
           </view>
         </view>
       </view>
@@ -271,6 +291,13 @@
             售后详情
           </text>
           <text
+            v-if="status==3 || (status==5 && dvyFlowId)"
+            class="apply-service"
+            @tap="toShipmentTrack"
+          >
+            查看物流
+          </text>
+          <text
             v-if="status==3"
             class="buy-again"
             @tap="onConfirmReceive"
@@ -322,6 +349,7 @@ const userAddrDto = ref(null)
 const orderNumber = ref('')
 const createTime = ref('')
 const total = ref(0) // 商品总额
+const dvyFlowId = ref('')
 const refund = ref(null)
 const canRefund = computed(() => {
   const sts = Number(status.value)
@@ -351,6 +379,7 @@ const loadOrderDetail = (orderNum) => {
       transfee.value = data.transfee
       reduceAmount.value = data.reduceAmount
       total.value = data.total
+      dvyFlowId.value = data.dvyFlowId || ''
       uni.hideLoading()
       loadRefund(orderNum)
     })
@@ -372,6 +401,21 @@ const loadRefund = (orderNum) => {
 const toRefundApply = () => {
   uni.navigateTo({
     url: '/pages/refund-apply/refund-apply?orderNum=' + orderNumber.value
+  })
+}
+
+const toShipmentTrack = () => {
+  uni.navigateTo({
+    url: '/pages/express-delivery/express-delivery?orderNum=' + orderNumber.value
+  })
+}
+
+const toReturnTrack = () => {
+  if (!refund.value || !refund.value.refundSn) {
+    return
+  }
+  uni.navigateTo({
+    url: '/pages/express-delivery/express-delivery?refundSn=' + refund.value.refundSn
   })
 }
 

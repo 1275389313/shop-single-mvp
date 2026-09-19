@@ -3,11 +3,13 @@ package com.yami.shop.admin.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yami.shop.bean.app.param.OrderRefundAuditParam;
 import com.yami.shop.bean.app.param.OrderRefundReceiveParam;
+import com.yami.shop.bean.app.dto.DeliveryDto;
 import com.yami.shop.bean.model.OrderRefund;
 import com.yami.shop.common.annotation.SysLog;
 import com.yami.shop.common.response.ServerResponseEntity;
 import com.yami.shop.common.util.PageParam;
 import com.yami.shop.security.admin.util.SecurityUtils;
+import com.yami.shop.service.DeliveryTrackingService;
 import com.yami.shop.service.OrderRefundService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrderRefundAdminController {
 
     private final OrderRefundService orderRefundService;
+    private final DeliveryTrackingService deliveryTrackingService;
 
     @GetMapping("/page")
     @PreAuthorize("@pms.hasPermission('order:refund:page')")
@@ -57,5 +60,12 @@ public class OrderRefundAdminController {
     public ServerResponseEntity<OrderRefund> info(@RequestParam Long refundId) {
         Long shopId = SecurityUtils.getSysUser().getShopId();
         return ServerResponseEntity.success(orderRefundService.getShopRefund(shopId, refundId));
+    }
+
+    @GetMapping("/delivery")
+    @PreAuthorize("@pms.hasPermission('order:refund:info')")
+    public ServerResponseEntity<DeliveryDto> delivery(@RequestParam Long refundId) {
+        Long shopId = SecurityUtils.getSysUser().getShopId();
+        return ServerResponseEntity.success(deliveryTrackingService.queryReturnForShop(shopId, refundId));
     }
 }
