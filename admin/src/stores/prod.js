@@ -8,6 +8,7 @@ export const scoreProdStore = defineStore('prod', {
         price: 0, // 销售价
         oriPrice: 0, // 市场价
         stocks: 0, // 库存
+        stocksArm: undefined, // 库存预警，空跟随全局
         properties: '', // 销售属性组合字符串
         skuName: '', // sku名称
         prodName: '', // 商品名称

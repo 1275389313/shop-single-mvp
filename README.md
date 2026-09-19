@@ -36,6 +36,7 @@ Compose 只起 **MySQL + Redis**。首次启动会导入：
 3. `backend/db/03-patch-phase2.sql`（退款审核 / 店铺设置菜单）
 4. `backend/db/04-patch-phase3.sql`（确认退货收货权限）
 5. `backend/db/05-patch-coupon.sql`（优惠券表 + 菜单 + 演示满减/折扣券）
+6. `backend/db/06-patch-stock-alert.sql`（SKU `stocks_arm` + 全局阈值配置 + 库存预警菜单）
 
 **已有数据卷不会自动跑新 SQL。** 升级请再执行：
 
@@ -43,6 +44,7 @@ Compose 只起 **MySQL + Redis**。首次启动会导入：
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/03-patch-phase2.sql
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/04-patch-phase3.sql
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/05-patch-coupon.sql
+docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/06-patch-stock-alert.sql
 ```
 
 没有 Docker 时，自行安装 MySQL/Redis，导入上述 SQL，账号默认 `root/root`，库名 `yami_shops`。
@@ -89,7 +91,7 @@ pnpm dev
 
 `admin/.env.development` 里 `VITE_APP_BASE_API=http://127.0.0.1:8085`，本地图片前缀指向用户端 `http://127.0.0.1:8086/mall4j/img/`。浏览器打开 Vite 提示的地址（本仓库默认 **http://localhost:9527**）。
 
-导入 `05-patch-coupon.sql` 后请**重新登录**管理端，菜单才会出现「门店管理 → 优惠券」。`04-patch-phase3.sql` 为退款审核增加「确认收货退款」权限；未导入时，拥有审核权限的账号仍可确认退货（接口兼容 `order:refund:audit`）。
+导入 `05-patch-coupon.sql` 后请**重新登录**管理端，菜单才会出现「门店管理 → 优惠券」。导入 `06-patch-stock-alert.sql` 后重新登录才会出现「产品管理 → 库存预警」。`04-patch-phase3.sql` 为退款审核增加「确认收货退款」权限；未导入时，拥有审核权限的账号仍可确认退货（接口兼容 `order:refund:audit`）。
 
 ## 4. uni-app / 微信小程序
 
@@ -157,6 +159,7 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    | 地址 | 我的 → 收货地址 | `/p/address/**` |
 
 6. 管理端（浏览器 `http://localhost:9527`，账号 `admin / 123456`，滑块验证码）：
+   - **库存预警** 全局阈值、低于阈值的 SKU 列表；商品发布页可为 SKU 填独立阈值
    - **优惠券** 新建满减/折扣、投放、改库存与有效期
    - **订单管理** 发货（待发货订单）；已发货订单详情可看物流时间轴（无密钥时为模拟轨迹）
    - **退款审核** 同意 / 拒绝（`PUT /order/refund/audit`）。仅退款同意=立刻 mock 退款；退货退款同意=等买家寄回。
@@ -168,6 +171,7 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    - `request:fail`：API 没起来，或端口不是 8086
    - 登录后立刻过期：Redis 没起
    - 管理端看不到优惠券菜单：未导入 `05-patch-coupon.sql`，或导入后未重新登录
+   - 管理端看不到库存预警菜单：未导入 `06-patch-stock-alert.sql`，或导入后未重新登录
    - 管理端看不到退款菜单：未导入 `03-patch-phase2.sql`，或导入后未重新登录
 
 H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.login`，用 **模拟微信登录**。
@@ -206,6 +210,7 @@ H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.
 - 地址 CRUD、商品上下架、Banner、店铺设置页（单店）
 - 管理端操作日志（`@SysLog`，如发货、退款审核、确认退货、优惠券）
 - 优惠券：管理端满减/折扣、投放与库存；买家领取、结算选择、下单核销；未支付取消退券
+- 库存预警：全局阈值（`tz_sys_config`）+ 可选 SKU 阈值（`tz_sku.stocks_arm`）；管理端列表与首页/商品列表角标
 
 明确未完成或薄弱：
 
@@ -230,7 +235,7 @@ H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.
 | 评价晒图 | 本地上传 + 可选占位图，评价立刻上架 | 七牛/COS 真实 CDN；人工审核流可把默认 status 改回 0 |
 | 订阅消息 | 无 | 模板 id 配置钩子（P1 TODO） |
 
-**P1 后续（本轮不做，仅占位）：** 库存预警、简单仪表盘、订阅消息配置钩子。
+**P1 后续（本轮不做，仅占位）：** 简单仪表盘、订阅消息配置钩子。
 
 ## 优惠券怎么用（P1）
 
@@ -285,6 +290,24 @@ uni-app：订单列表/详情「查看物流」；售后详情/列表在已填�
 | 占位图 | POST | `/p/file/placeholder` |
 | 商品评价 | GET | `/prodComm/prodCommPageByProd?prodId=&evaluate=-1` |
 | 管理隐藏 | PUT | `/prod/prodComm/status?prodCommId=&status=-1` |
+
+## 库存预警怎么用（P1）
+
+开源 mall4j 的 `ProductDto.stocksArm` 只是 DTO 残留，表上没有库存预警。本仓库比较的是现有 **`tz_sku.stocks`**（下单扣减的可售库存，`-1` 无限不算预警），没有新业务表。
+
+1. 导入 `backend/db/06-patch-stock-alert.sql`，**重新登录**管理端。
+2. 「产品管理 → 库存预警」：改**全局阈值**（默认 10，存在 `tz_sys_config.STOCK_ALERT_THRESHOLD`）。可售库存 ≤ 阈值的启用 SKU 出现在列表里。
+3. 列表或商品发布页的 SKU「预警阈值」：留空跟随全局；填数字覆盖；`-1` 该规格不预警。
+4. 管理端首页和商品列表有低库存数量角标（只计**上架**商品的 SKU）。商品列表「低库存」标签按 SPU `total_stocks` 对比全局阈值，精确名单以预警页 SKU 为准。
+
+不发短信、不订阅消息。mock 支付与库存扣减逻辑未改。
+
+| 端 | 方法 | 路径 | 说明 |
+| --- | --- | --- | --- |
+| 管理端 | GET | `/prod/stockAlert/config` | 全局阈值 + 上架低库存数量 |
+| 管理端 | PUT | `/prod/stockAlert/config` | `{ "globalThreshold": 10 }` |
+| 管理端 | GET | `/prod/stockAlert/page` | 低库存 SKU 分页，`prodName` / `prodStatus` |
+| 管理端 | PUT | `/prod/stockAlert/sku` | `{ "skuId", "stocksArm" }` |
 
 ## 开发约定
 

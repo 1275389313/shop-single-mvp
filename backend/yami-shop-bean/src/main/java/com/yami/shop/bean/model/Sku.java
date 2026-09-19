@@ -10,6 +10,8 @@
 
 package com.yami.shop.bean.model;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -60,6 +62,12 @@ public class Sku implements Serializable {
      * 实际库存
      */
     private Integer actualStocks;
+
+    /**
+     * 库存预警阈值。null 跟随全局配置；-1 该 SKU 不预警。
+     */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Integer stocksArm;
 
     /**
      * 修改时间

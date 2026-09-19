@@ -31,7 +31,8 @@ export const tableOption = {
     prop: 'price'
   }, {
     label: '商品库存',
-    prop: 'totalStocks'
+    prop: 'totalStocks',
+    slot: true
   }, {
     label: '产品图片',
     prop: 'pic',

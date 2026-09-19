@@ -73,6 +73,9 @@ SKU 表有实际库存和库存字段：
 ```text
 tz_sku.actual_stocks
 tz_sku.stocks
+tz_sku.stocks_arm
 ```
+
+`stocks_arm` 可选：`NULL` 跟随全局配置 `tz_sys_config.STOCK_ALERT_THRESHOLD`，`-1` 该 SKU 不预警。管理端「库存预警」比较的是 `tz_sku.stocks`（下单扣减的可售库存）。
 
 交易链路中库存会影响购物车添加、下单、取消订单和发货后的缓存清理。
