@@ -100,22 +100,31 @@ public class PayServiceImpl implements PayService {
     @Transactional(rollbackFor = Exception.class)
     public List<String> paySuccess(String payNo, String bizPayNo) {
         List<OrderSettlement> orderSettlements = orderSettlementMapper.selectList(new LambdaQueryWrapper<OrderSettlement>().eq(OrderSettlement::getPayNo, payNo));
+        if (orderSettlements == null || orderSettlements.isEmpty()) {
+            throw new YamiShopBindException("支付单不存在");
+        }
 
+        List<String> orderNumbers = orderSettlements.stream().map(OrderSettlement::getOrderNumber).collect(Collectors.toList());
         OrderSettlement settlement = orderSettlements.get(0);
 
-        // 订单已支付
-        if (settlement.getPayStatus() == 1) {
-            throw new YamiShopBindException("订单已支付");
+        // Idempotent callback: already paid → success (WeChat will retry otherwise)
+        if (settlement.getPayStatus() != null && settlement.getPayStatus() == 1) {
+            return orderNumbers;
         }
-        // 修改订单结算信息
-        if (orderSettlementMapper.updateToPay(payNo, settlement.getVersion()) < 1) {
+
+        int version = settlement.getVersion() == null ? 0 : settlement.getVersion();
+        if (orderSettlementMapper.updateToPay(payNo, version) < 1) {
+            OrderSettlement again = orderSettlementMapper.getSettlementsByPayNo(payNo).stream().findFirst().orElse(null);
+            if (again != null && again.getPayStatus() != null && again.getPayStatus() == 1) {
+                return orderNumbers;
+            }
             throw new YamiShopBindException("结算信息已更改");
         }
 
+        if (StrUtil.isNotBlank(bizPayNo)) {
+            orderSettlementMapper.updateSettlementsByPayNo(payNo, bizPayNo);
+        }
 
-        List<String> orderNumbers = orderSettlements.stream().map(OrderSettlement::getOrderNumber).collect(Collectors.toList());
-
-        // 将订单改为已支付状态
         orderMapper.updateByToPaySuccess(orderNumbers, PayType.WECHATPAY.value());
 
         List<Order> orders = orderNumbers.stream().map(orderNumber -> orderMapper.getOrderByOrderNumber(orderNumber)).collect(Collectors.toList());

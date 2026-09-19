@@ -68,6 +68,14 @@
         登录
       </button>
       <button
+        v-if="mockWx"
+        class="authorized-btn"
+        style="margin-top: 16rpx; background: #07c160;"
+        @tap="mockWxLogin"
+      >
+        模拟微信登录
+      </button>
+      <button
         class="to-idx-btn"
         @tap="toIndex"
       >
@@ -82,6 +90,7 @@ import { encrypt } from '@/utils/crypto.js'
 
 const principal = ref('') // 账号
 const errorTips = ref(0) // 错误提示
+const mockWx = ref(String(import.meta.env.VITE_APP_MOCK_WX) === 'true')
 watch(
   () => principal.value,
   () => {
@@ -144,6 +153,34 @@ const login = () => {
 const toRegitser = () => {
   uni.navigateTo({
     url: '/pages/register/register'
+  })
+}
+
+/**
+ * mock 微信登录：任意 code 即可换 token，无需真实 AppID
+ */
+const mockWxLogin = () => {
+  http.request({
+    url: '/wx/login',
+    method: 'post',
+    data: {
+      code: 'dev-' + Date.now(),
+      nickName: '模拟微信用户'
+    }
+  }).then(({ data }) => {
+    http.loginSuccess(data, () => {
+      uni.showToast({
+        title: data.mock ? '模拟微信登录成功' : '登录成功',
+        icon: 'none',
+        complete: () => {
+          setTimeout(() => {
+            uni.switchTab({
+              url: '/pages/index/index'
+            })
+          }, 1000)
+        }
+      })
+    })
   })
 }
 

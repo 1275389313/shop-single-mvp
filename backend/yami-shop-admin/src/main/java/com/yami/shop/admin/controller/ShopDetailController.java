@@ -15,6 +15,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yami.shop.bean.model.ShopDetail;
 import com.yami.shop.bean.param.ShopDetailParam;
+import com.yami.shop.common.exception.YamiShopBindException;
 import com.yami.shop.common.util.PageParam;
 import com.yami.shop.security.admin.util.SecurityUtils;
 import com.yami.shop.service.ShopDetailService;
@@ -69,13 +70,15 @@ public class ShopDetailController {
 
 
 	/**
-	 * 分页获取
+	 * 分页获取（单店：只返回当前登录店铺）
 	 */
     @GetMapping("/page")
 	@PreAuthorize("@pms.hasPermission('shop:shopDetail:page')")
 	public ServerResponseEntity<IPage<ShopDetail>> page(ShopDetail shopDetail,PageParam<ShopDetail> page){
+		Long shopId = currentShopId();
 		IPage<ShopDetail> shopDetails = shopDetailService.page(page,
 				new LambdaQueryWrapper<ShopDetail>()
+						.eq(ShopDetail::getShopId, shopId)
 						.like(StrUtil.isNotBlank(shopDetail.getShopName()),ShopDetail::getShopName,shopDetail.getShopName())
 						.orderByDesc(ShopDetail::getShopId));
 		return ServerResponseEntity.success(shopDetails);
@@ -87,74 +90,85 @@ public class ShopDetailController {
 	@GetMapping("/info/{shopId}")
 	@PreAuthorize("@pms.hasPermission('shop:shopDetail:info')")
 	public ServerResponseEntity<ShopDetail> info(@PathVariable("shopId") Long shopId){
+		assertCurrentShop(shopId);
 		ShopDetail shopDetail = shopDetailService.getShopDetailByShopId(shopId);
-		// 店铺图片
 		return ServerResponseEntity.success(shopDetail);
 	}
 
 	/**
-	 * 保存
+	 * 保存 — 单店版禁用创建新店铺
 	 */
 	@PostMapping
 	@PreAuthorize("@pms.hasPermission('shop:shopDetail:save')")
 	public ServerResponseEntity<Void> save(@Valid ShopDetailParam shopDetailParam){
-		ShopDetail shopDetail = BeanUtil.copyProperties(shopDetailParam, ShopDetail.class);
-		shopDetail.setCreateTime(new Date());
-		shopDetail.setShopStatus(1);
-		shopDetailService.save(shopDetail);
-		return ServerResponseEntity.success();
+		throw new YamiShopBindException("单店版已禁用新建店铺，请修改当前店铺资料");
 	}
 
 	/**
-	 * 修改
+	 * 修改（强制落在当前店铺）
 	 */
 	@PutMapping
 	@PreAuthorize("@pms.hasPermission('shop:shopDetail:update')")
 	public ServerResponseEntity<Void> update(@Valid ShopDetailParam shopDetailParam){
-		ShopDetail daShopDetail = shopDetailService.getShopDetailByShopId(shopDetailParam.getShopId());
+		Long shopId = currentShopId();
+		shopDetailParam.setShopId(shopId);
+		ShopDetail daShopDetail = shopDetailService.getShopDetailByShopId(shopId);
 		ShopDetail shopDetail = BeanUtil.copyProperties(shopDetailParam, ShopDetail.class);
+		shopDetail.setShopId(shopId);
 		shopDetail.setUpdateTime(new Date());
 		shopDetailService.updateShopDetail(shopDetail,daShopDetail);
 		return ServerResponseEntity.success();
 	}
 
 	/**
-	 * 删除
+	 * 删除 — 单店版禁用
 	 */
 	@DeleteMapping("/{id}")
 	@PreAuthorize("@pms.hasPermission('shop:shopDetail:delete')")
 	public ServerResponseEntity<Void> delete(@PathVariable Long id){
-		shopDetailService.deleteShopDetailByShopId(id);
-		return ServerResponseEntity.success();
+		throw new YamiShopBindException("单店版已禁用删除店铺");
 	}
 
 	/**
-	 * 更新店铺状态
+	 * 更新店铺状态 — 仅当前店铺
 	 */
 	@PutMapping("/shopStatus")
 	@PreAuthorize("@pms.hasPermission('shop:shopDetail:shopStatus')")
 	public ServerResponseEntity<Void> shopStatus(@RequestParam Long shopId,@RequestParam Integer shopStatus){
+		assertCurrentShop(shopId);
 		ShopDetail shopDetail = new ShopDetail();
 		shopDetail.setShopId(shopId);
 		shopDetail.setShopStatus(shopStatus);
 		shopDetailService.updateById(shopDetail);
-		// 更新完成后删除缓存
 		shopDetailService.removeShopDetailCacheByShopId(shopDetail.getShopId());
 		return ServerResponseEntity.success();
 	}
 
 
 	/**
-	 * 获取所有的店铺名称
+	 * 获取店铺名称（单店只返回自己）
 	 */
     @GetMapping("/listShopName")
 	public ServerResponseEntity<List<ShopDetail>> listShopName(){
-		List<ShopDetail> list = shopDetailService.list().stream().map((dbShopDetail) ->{
+		Long shopId = currentShopId();
+		List<ShopDetail> list = shopDetailService.list(new LambdaQueryWrapper<ShopDetail>().eq(ShopDetail::getShopId, shopId))
+				.stream().map((dbShopDetail) ->{
 			ShopDetail shopDetail = new ShopDetail();
 			shopDetail.setShopId(dbShopDetail.getShopId());
 			shopDetail.setShopName(dbShopDetail.getShopName());
 			return shopDetail;
 		}).collect(Collectors.toList());
 		return ServerResponseEntity.success(list);
+	}
+
+	private Long currentShopId() {
+		Long shopId = SecurityUtils.getSysUser().getShopId();
+		return shopId == null ? 1L : shopId;
+	}
+
+	private void assertCurrentShop(Long shopId) {
+		if (shopId == null || !java.util.Objects.equals(shopId, currentShopId())) {
+			throw new YamiShopBindException("单店版不能操作其他店铺");
+		}
 	}
 }

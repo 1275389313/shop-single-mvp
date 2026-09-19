@@ -24,6 +24,7 @@ import com.yami.shop.bean.model.OrderItem;
 import com.yami.shop.bean.model.UserAddrOrder;
 import com.yami.shop.bean.param.DeliveryOrderParam;
 import com.yami.shop.bean.param.OrderParam;
+import com.yami.shop.common.annotation.SysLog;
 import com.yami.shop.common.exception.YamiShopBindException;
 import com.yami.shop.common.response.ServerResponseEntity;
 import com.yami.shop.common.util.PageParam;
@@ -102,6 +103,7 @@ public class OrderController {
      * 发货
      */
     @PutMapping("/delivery")
+    @SysLog("订单发货")
     @PreAuthorize("@pms.hasPermission('order:order:delivery')")
     public ServerResponseEntity<Void> delivery(@RequestBody DeliveryOrderParam deliveryOrderParam) {
         Long shopId = SecurityUtils.getSysUser().getShopId();

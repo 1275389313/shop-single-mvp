@@ -1,70 +1,61 @@
-/*
- * Copyright (c) 2018-2999 广州市蓝海创新科技有限公司 All rights reserved.
- *
- * https://www.mall4j.com/
- *
- * 未经允许，不可做商业用途！
- *
- * 版权所有，侵权必究！
- */
-
 package com.yami.shop.api.controller;
 
 import com.yami.shop.bean.app.param.PayParam;
 import com.yami.shop.bean.pay.PayInfoDto;
+import com.yami.shop.bean.pay.PayResultDto;
+import com.yami.shop.common.config.ShopMvpProperties;
+import com.yami.shop.common.response.ServerResponseEntity;
 import com.yami.shop.security.api.model.YamiUser;
 import com.yami.shop.security.api.util.SecurityUtils;
 import com.yami.shop.service.PayService;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
-import lombok.AllArgsConstructor;
-import lombok.SneakyThrows;
-import com.yami.shop.common.response.ServerResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @author lanhai
+ * Payment entry. Default is mock (immediate paySuccess). Real WeChat prepay is TODO.
  */
 @RestController
 @RequestMapping("/p/order")
-@Tag(name = "订单接口")
-@AllArgsConstructor
+@Tag(name = "订单支付")
+@RequiredArgsConstructor
 public class PayController {
 
     private final PayService payService;
+    private final ShopMvpProperties shopMvpProperties;
 
-    /**
-     * 支付接口
-     */
     @PostMapping("/pay")
-    @Operation(summary = "根据订单号进行支付" , description = "根据订单号进行支付")
-    public ServerResponseEntity<Void> pay(@RequestBody PayParam payParam) {
-        YamiUser user = SecurityUtils.getUser();
-        String userId = user.getUserId();
-
-
-        PayInfoDto payInfo = payService.pay(userId, payParam);
-        payService.paySuccess(payInfo.getPayNo(), "");
-        return ServerResponseEntity.success();
+    @Operation(summary = "根据订单号进行支付")
+    public ServerResponseEntity<PayResultDto> pay(@RequestBody PayParam payParam) {
+        return ServerResponseEntity.success(doPay(payParam));
     }
 
-    /**
-     * 普通支付接口
-     */
     @PostMapping("/normalPay")
-    @Operation(summary = "根据订单号进行支付" , description = "根据订单号进行支付")
-    public ServerResponseEntity<Boolean> normalPay(@RequestBody PayParam payParam) {
+    @Operation(summary = "根据订单号进行支付（uni-app 默认走此接口）")
+    public ServerResponseEntity<PayResultDto> normalPay(@RequestBody PayParam payParam) {
+        return ServerResponseEntity.success(doPay(payParam));
+    }
 
+    private PayResultDto doPay(PayParam payParam) {
         YamiUser user = SecurityUtils.getUser();
-        String userId = user.getUserId();
-        PayInfoDto pay = payService.pay(userId, payParam);
-
-        // 根据内部订单号更新order settlement
-        payService.paySuccess(pay.getPayNo(), "");
-
-        return ServerResponseEntity.success(true);
+        if (payParam.getPayType() == null) {
+            payParam.setPayType(1);
+        }
+        PayInfoDto payInfo = payService.pay(user.getUserId(), payParam);
+        PayResultDto result = new PayResultDto();
+        result.setPayNo(payInfo.getPayNo());
+        result.setMock(shopMvpProperties.getMock().isPay());
+        if (shopMvpProperties.getMock().isPay()) {
+            payService.paySuccess(payInfo.getPayNo(), "MOCK-" + payInfo.getPayNo());
+            result.setPaid(true);
+        } else {
+            // TODO: create WeChat prepay order with mchId/apiKey and return paySign fields
+            result.setPaid(false);
+        }
+        return result;
     }
 }

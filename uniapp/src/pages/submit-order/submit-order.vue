@@ -455,12 +455,13 @@ const normalPay = (orderNumbers) => {
     url: '/p/order/normalPay',
     method: 'POST',
     data: {
-      orderNumbers
+      orderNumbers,
+      payType: 1
     }
   })
     .then(({ data }) => {
       uni.hideLoading()
-      if (data) {
+      if (data && (data.paid === undefined || data.paid)) {
         uni.showToast({
           title: '模拟支付成功',
           icon: 'none'

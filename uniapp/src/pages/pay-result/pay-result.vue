@@ -89,6 +89,16 @@ const payAgain = () => {
   })
     .then(({ data }) => {
       uni.hideLoading()
+      if (data && (data.paid || data.mock)) {
+        uni.redirectTo({
+          url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + orderNumbers.value
+        })
+        return
+      }
+      if (!data || !data.timeStamp) {
+        uni.showToast({ title: '请使用模拟支付或接入真实微信支付', icon: 'none' })
+        return
+      }
       uni.requestPayment({
         timeStamp: data.timeStamp,
         nonceStr: data.nonceStr,
@@ -97,7 +107,7 @@ const payAgain = () => {
         paySign: data.paySign,
         success: () => {
           uni.redirectTo({
-            url: '/pages/pay-result/pay-result?sts=1&orderNum=' + orderNumbers.value
+            url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + orderNumbers.value
           })
         }
       })

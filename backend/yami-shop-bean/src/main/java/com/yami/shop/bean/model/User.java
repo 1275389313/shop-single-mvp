@@ -70,6 +70,11 @@ public class User implements Serializable {
     private String userMobile;
 
     /**
+     * WeChat openId (mock prefix mock_ or real). Added in db/02-patch-phase1.sql.
+     */
+    private String wxOpenId;
+
+    /**
      * 修改时间
      */
 
