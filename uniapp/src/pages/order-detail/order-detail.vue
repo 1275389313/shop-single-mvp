@@ -59,7 +59,21 @@
                     .{{ wxs.parsePrice(item.price)[1] }}
                   </text>
                 </text>
-                <view class="btn-box" />
+                <view class="btn-box">
+                  <text
+                    v-if="canReviewItem(item)"
+                    class="mini-btn"
+                    @tap.stop="toReview(item)"
+                  >
+                    评价晒图
+                  </text>
+                  <text
+                    v-else-if="item.commSts === 1 && (status == 4 || status == 5)"
+                    class="mini-btn done"
+                  >
+                    已评价
+                  </text>
+                </view>
               </view>
             </view>
           </view>
@@ -244,7 +258,7 @@
 
       <!-- 底部栏 -->
       <view
-        v-if="status==1 || status==2 || status==3 || status==5 || status==6"
+        v-if="status==1 || status==2 || status==3 || status==4 || status==5 || status==6"
         class="order-detail-footer"
       >
         <text
@@ -298,6 +312,13 @@
             查看物流
           </text>
           <text
+            v-if="status==4 || (status==5 && hasUnreviewed)"
+            class="buy-again"
+            @tap="toFirstReview"
+          >
+            评价晒图
+          </text>
+          <text
             v-if="status==3"
             class="buy-again"
             @tap="onConfirmReceive"
@@ -324,7 +345,7 @@ onLoad((options) => {
 
 onShow(() => {
   if (orderNumber.value) {
-    loadRefund(orderNumber.value)
+    loadOrderDetail(orderNumber.value)
   }
 })
 
@@ -356,6 +377,37 @@ const canRefund = computed(() => {
   return (sts === 2 || sts === 3 || sts === 5) && (!refund.value || refund.value.refundSts === 3)
 })
 const canFillExpress = computed(() => canEditReturnExpress(refund.value))
+const hasUnreviewed = computed(() => {
+  const sts = Number(status.value)
+  if (sts !== 4 && sts !== 5) {
+    return false
+  }
+  return (orderItemDtos.value || []).some(item => item.commSts !== 1)
+})
+const canReviewItem = (item) => {
+  const sts = Number(status.value)
+  return (sts === 4 || sts === 5) && item && item.commSts !== 1 && item.orderItemId
+}
+const reviewUrl = (item) => {
+  let url = '/pages/submit-comment/submit-comment?orderItemId=' + item.orderItemId
+    + '&prodId=' + (item.prodId || '')
+  if (item.prodName) {
+    url += '&prodName=' + encodeURIComponent(item.prodName)
+  }
+  if (item.pic) {
+    url += '&pic=' + encodeURIComponent(item.pic)
+  }
+  return url
+}
+const toReview = (item) => {
+  uni.navigateTo({ url: reviewUrl(item) })
+}
+const toFirstReview = () => {
+  const item = (orderItemDtos.value || []).find(i => i.commSts !== 1)
+  if (item) {
+    toReview(item)
+  }
+}
 /**
  * 加载订单数据
  */
@@ -467,11 +519,24 @@ const onConfirmReceive = () => {
     confirmColor: '#eb2444',
     success (res) {
       if (res.confirm) {
+        const item = (orderItemDtos.value || []).find(i => i.commSts !== 1)
         http.request({
           url: '/p/myOrder/receipt/' + orderNumber.value,
           method: 'PUT'
         }).then(() => {
           loadOrderDetail(orderNumber.value)
+          if (item) {
+            uni.showModal({
+              title: '确认收货成功',
+              content: '去评价晒图？',
+              confirmText: '去评价',
+              success (r) {
+                if (r.confirm) {
+                  toReview(item)
+                }
+              }
+            })
+          }
         })
       }
     }

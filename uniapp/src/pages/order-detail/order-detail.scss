@@ -114,14 +114,18 @@
     .btn-box {
       float: right;
       text-align: right;
-      .btn {
-        padding: 6rpx 30rpx;
+      .mini-btn {
+        padding: 6rpx 20rpx;
         line-height: 36rpx;
-        margin-left: 20rpx;
-        font-size: 24rpx;
+        font-size: 22rpx;
         display: inline-block;
-        border: 2rpx solid #e4e4e4;
+        border: 2rpx solid #eb2444;
+        color: #eb2444;
         border-radius: 50rpx;
+      }
+      .mini-btn.done {
+        border-color: #ccc;
+        color: #999;
       }
     }
   }

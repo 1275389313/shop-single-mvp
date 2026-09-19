@@ -13,6 +13,8 @@ package com.yami.shop.bean.app.param;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 /**
@@ -24,19 +26,22 @@ public class ProdCommParam {
     /**
      * 商品ID
      */
-    @Schema(description = "商品id" )
+    @Schema(description = "商品id")
     private Long prodId;
     /**
      * 订单项ID
      */
-    @Schema(description = "订单项ID" )
+    @Schema(description = "订单项ID", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "订单项不能为空")
     private Long orderItemId;
 
     /**
      * 评价，0-5分
      */
-    @Schema(description = "评价，0-5分" ,requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "评价，1-5分" ,requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "评价不能为空")
+    @Min(value = 1, message = "评分最少1分")
+    @Max(value = 5, message = "评分最多5分")
     private Integer score;
 
     @Schema(description = "评论内容" ,requiredMode = Schema.RequiredMode.REQUIRED)

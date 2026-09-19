@@ -108,11 +108,17 @@
           </view>
           <view
             class="items"
-            data-sts="5"
+            data-sts="4"
             @tap="toOrderListPage"
           >
             <image src="@/static/images/icon/toComment.png" />
-            <text>已完成</text>
+            <text>待评价</text>
+            <text
+              v-if="orderAmount.confirm>0"
+              class="num-badge"
+            >
+              {{ orderAmount.confirm }}
+            </text>
           </view>
         </view>
       </view>

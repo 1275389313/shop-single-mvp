@@ -34,6 +34,21 @@
         >
           查看
         </el-button>
+
+        <el-button
+          v-if="scope.row.status !== -1"
+          type="warning"
+          @click="onSetStatus(scope.row, -1)"
+        >
+          隐藏
+        </el-button>
+        <el-button
+          v-if="scope.row.status === -1 || scope.row.status === 0"
+          type="success"
+          @click="onSetStatus(scope.row, 1)"
+        >
+          显示
+        </el-button>
       </template>
     </avue-crud>
     <add-or-update
@@ -85,6 +100,30 @@ const onAddOrUpdate = (id, isEdit) => {
   nextTick(() => {
     addOrUpdateRef.value?.init(id, isEdit)
   })
+}
+const onSetStatus = (row, status) => {
+  const tip = status === -1 ? '隐藏后买家商品页不再展示该评价' : '显示后买家可见'
+  ElMessageBox.confirm(tip + '，确定？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    http({
+      url: http.adornUrl('/prod/prodComm/status'),
+      method: 'put',
+      params: http.adornParams({
+        prodCommId: row.prodCommId,
+        status
+      })
+    }).then(() => {
+      ElMessage({
+        message: '操作成功',
+        type: 'success',
+        duration: 1500,
+        onClose: () => getDataList()
+      })
+    })
+  }).catch(() => {})
 }
 const rowDel = (row) => {
   ElMessageBox.confirm('确定进行删除操作?', '提示', {

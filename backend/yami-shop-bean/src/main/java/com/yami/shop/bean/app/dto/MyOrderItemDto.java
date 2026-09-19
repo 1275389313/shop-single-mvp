@@ -38,4 +38,13 @@ public class MyOrderItemDto {
     @Schema(description = "skuName" ,requiredMode = Schema.RequiredMode.REQUIRED)
     private String skuName;
 
+    private Long orderItemId;
+
+    private Long prodId;
+
+    /**
+     * 0 未评价 1 已评价
+     */
+    private Integer commSts;
+
 }

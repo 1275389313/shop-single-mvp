@@ -15,7 +15,7 @@
 | 5 | 成功 SUCCESS |
 | 6 | 关闭 CLOSE（未支付超时/取消，会回库存） |
 
-上游 `MyOrderController.receipt` 调 `confirmOrder`，SQL 把状态写成 **5** 而不是 4。评价流程不完整，按成功单处理即可。
+上游 `MyOrderController.receipt` 调 `confirmOrder`，状态写成 **4 待评价**。买家对订单项评价（晒图可选）后，若该单全部商品已评，再改为 **5 成功**。已是 5 的历史单只要 `comm_sts=0` 仍可评。
 
 ## 时序（mock）
 
@@ -47,7 +47,10 @@
 
 用户端
      |  PUT /p/myOrder/receipt/{orderNumber}
-     | ---------------------------------->  |  status=5
+     | ---------------------------------->  |  status=4（待评价）
+     |  POST /p/prodComm  评分+文字+可选图
+     | ---------------------------------->  |  tz_prod_comm.status=1 立刻上架
+     |                                      |  全部商品评完 → status=5
 ```
 
 未支付超时：`OrderAutoCloseScheduler` 每分钟扫描 `status=1` 且更新时间早于 N 分钟的订单，调用 `OrderService.cancelOrders`（status=6 + `returnStock` + 退回已核销优惠券）。不依赖 xxl-job。
@@ -67,7 +70,13 @@
 | 支付 | POST | `/p/order/pay` 或 `/p/order/normalPay` | mock 时当场已付 |
 | 回调 | POST | `/notice/pay/mock` | `{ "payNo": "..." }` 幂等 |
 | 发货 | PUT | `/order/order/delivery` | 管理端 |
-| 确认收货 | PUT | `/p/myOrder/receipt/{orderNumber}` | 用户端 |
+| 确认收货 | PUT | `/p/myOrder/receipt/{orderNumber}` | 用户端，status=4 待评价 |
+| 发表评价 | POST | `/p/prodComm` | 评分+文字+可选晒图；需登录 |
+| 上传晒图 | POST | `/p/file/upload` | 本地目录，无需 COS |
+| 占位图 | POST | `/p/file/placeholder` | 无图时的本地 SVG |
+| 商品评价 | GET | `/prodComm/prodCommPageByProd` | 商品详情，仅 status=1 |
+| 评价汇总 | GET | `/prodComm/prodCommData` | 好评率等 |
+| 评论管理 | | `/prod/prodComm/**` | 管理端隐藏/显示 |
 | 退款申请 | POST | `/p/refund/apply` | 用户端（订单详情/列表入口） |
 | 我的退款 | GET | `/p/refund/page` | 用户端 |
 | 订单退款 | GET | `/p/refund/byOrder?orderNumber=` | 用户端 |
