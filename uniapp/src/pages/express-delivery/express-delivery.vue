@@ -3,6 +3,12 @@
   <view class="container">
     <view class="wrapper">
       <view
+        v-if="mockTip"
+        class="deliveryTip"
+      >
+        {{ mockTip }}
+      </view>
+      <view
         class="deliveryInfo"
         style="background:url(http://jiales.gz-yami.com/delivery-bg.png) center center no-repeat #fff;"
       >
@@ -25,6 +31,17 @@
             </text>
             <text class="value">
               {{ dvyFlowId }}
+            </text>
+          </view>
+          <view
+            v-if="stateText"
+            class="expno"
+          >
+            <text class="key">
+              物流状态：
+            </text>
+            <text class="value">
+              {{ stateText }}
             </text>
           </view>
         </view>
@@ -57,7 +74,7 @@
         v-else
         class="empty-space"
       >
-        暂无配送信息
+        {{ emptyText }}
       </view>
     </view>
   </view>
@@ -67,25 +84,58 @@
 const companyName = ref('')
 const dvyFlowId = ref('')
 const dvyData = ref([])
-/**
- * 生命周期函数--监听页面加载
- */
+const stateText = ref('')
+const mockTip = ref('')
+const emptyText = ref('暂无配送信息')
+
 onLoad((options) => {
-  uni.showLoading()
-  http.request({
-    url: '/delivery/check',
-    method: 'GET',
-    data: {
-      orderNumber: options.orderNum
-    }
+  const refundSn = options.refundSn
+  const orderNum = options.orderNum
+  uni.setNavigationBarTitle({
+    title: refundSn ? '退货物流' : '物流查询'
   })
+  uni.showLoading()
+  const req = refundSn
+    ? {
+        url: '/p/refund/delivery',
+        method: 'GET',
+        data: { refundSn }
+      }
+    : {
+        url: '/p/delivery/check',
+        method: 'GET',
+        data: { orderNumber: orderNum }
+      }
+  http.request(req)
     .then(({ data }) => {
-      companyName.value = data.companyName
-      dvyFlowId.value = data.dvyFlowId
-      dvyData.value = data.data
+      applyTrack(data)
       uni.hideLoading()
     })
+    .catch(() => {
+      uni.hideLoading()
+      emptyText.value = '物流查询失败'
+    })
 })
+
+const applyTrack = (data) => {
+  if (!data) {
+    return
+  }
+  companyName.value = data.companyName || ''
+  dvyFlowId.value = data.dvyFlowId || ''
+  dvyData.value = data.data || []
+  stateText.value = data.stateText || ''
+  if (data.mock) {
+    mockTip.value = data.message || '模拟轨迹（未配置快递100密钥）'
+  } else if (data.message && !(data.data && data.data.length)) {
+    emptyText.value = data.message
+  } else if (data.message && data.source === 'kuaidi100') {
+    mockTip.value = ''
+  }
+  if (!(data.data && data.data.length) && data.message) {
+    emptyText.value = data.message
+  }
+}
 </script>
 
 <style scoped lang="scss">

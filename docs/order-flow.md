@@ -73,6 +73,10 @@
 | 订单退款 | GET | `/p/refund/byOrder?orderNumber=` | 用户端 |
 | 退货物流公司 | GET | `/p/refund/deliveryList` | 用户端（名称列表，不含查询 URL） |
 | 填写退货物流 | PUT | `/p/refund/express` | 用户端，`OrderRefundExpressParam` |
+| 买家发货轨迹 | GET | `/p/delivery/check?orderNumber=` | 无密钥=模拟轨迹；须登录 |
+| 买家退货轨迹 | GET | `/p/refund/delivery?refundSn=` | 无密钥=模拟轨迹；须登录 |
+| 管理端发货轨迹 | GET | `/order/order/delivery/check?orderNumber=` | 管理端 |
+| 管理端退货轨迹 | GET | `/order/refund/delivery?refundId=` | 管理端 |
 | 退款列表 | GET | `/order/refund/page` | 管理端「退款审核」 |
 | 退款审核 | PUT | `/order/refund/audit` | 管理端同意=2 / 拒绝=3 |
 | 确认退货收货 | PUT | `/order/refund/receive` | 管理端，退货退款寄回后 mock 退款 |

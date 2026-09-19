@@ -71,6 +71,7 @@ mvn -pl yami-shop-admin -DskipTests spring-boot:run
 | `SHOP_MVP_ORDER_AUTO_CLOSE_MINUTES` | 30 | 超时分钟 |
 | `WX_APP_ID` / `WX_APP_SECRET` | 空 | 真实小程序（mock 关闭后才需要） |
 | `WX_PAY_MCH_ID` / `WX_PAY_API_KEY` / `WX_PAY_NOTIFY_URL` | 空 | 真实支付；回调 URL 必须 **HTTPS** |
+| `KUAIDI100_CUSTOMER` / `KUAIDI100_KEY` | 空 | 快递100即时查询；都空则返回 **模拟轨迹** |
 
 OSS：开源版接的是 **七牛**（`backend/yami-shop-common/src/main/resources/shop.properties`）。本地默认 `uploadType=1` 写 `/tmp/shop-mvp-upload/`。COS/S3 需自行加实现，配置钩子已在 `ImgUpload` / `Qiniu`。
 
@@ -149,16 +150,16 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    | 领券 | 首页「领优惠券」或 我的 → 领券中心 | `GET /coupon/list`、`POST /p/coupon/receive` |
    | 结算 | 提交订单（选地址，选优惠券，看运费） | `POST /p/order/confirm`（`couponIds` 为用户券 ID）→ `POST /p/order/submit`（核销） |
    | 支付 | 自动调 mock 支付 | `POST /p/order/normalPay`（当场 `status=2`） |
-   | 订单 | 订单列表 / 详情 | `/p/myOrder/**`；详情可 **确认收货** |
+   | 订单 | 订单列表 / 详情 | `/p/myOrder/**`；详情可 **确认收货**、**查看物流** |
    | 退款申请 | 订单详情 / 列表「申请退款」 | `POST /p/refund/apply` |
-   | 退货物流 | 售后页「填写退货物流」 | `PUT /p/refund/express` |
+   | 退货物流 | 售后页「填写退货物流」 | `PUT /p/refund/express`；填单号后可 **查看退货轨迹** |
    | 地址 | 我的 → 收货地址 | `/p/address/**` |
 
 6. 管理端（浏览器 `http://localhost:9527`，账号 `admin / 123456`，滑块验证码）：
    - **优惠券** 新建满减/折扣、投放、改库存与有效期
-   - **订单管理** 发货（待发货订单）
+   - **订单管理** 发货（待发货订单）；已发货订单详情可看物流时间轴（无密钥时为模拟轨迹）
    - **退款审核** 同意 / 拒绝（`PUT /order/refund/audit`）。仅退款同意=立刻 mock 退款；退货退款同意=等买家寄回。
-   - 买家填写物流后，**确认收货退款**（`PUT /order/refund/receive`）。只改库，**不会**打微信退款。
+   - 买家填写物流后，**确认收货退款**（`PUT /order/refund/receive`）。详情/确认弹窗可看退货轨迹。只改库，**不会**打微信退款。
    - 可选：再调 `POST /notice/pay/mock` `{ "payNo": "..." }` 验证支付回调幂等。
 
 7. 常见失败：
@@ -177,10 +178,10 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 1. 打开登录页，点 **微信登录** 或 **模拟微信登录**（`POST /wx/login`，mock 时 `code` 任意）
 2. 加购 → 提交订单（`POST /p/order/submit`）→ 前端会调 `POST /p/order/normalPay`
 3. 订单变为待发货（status=2）。也可用 `POST /notice/pay/mock` 按 `payNo` 再回调一次，**幂等**
-4. 管理端发货 → 用户确认收货
+4. 管理端发货 → 用户确认收货。发货后买卖双方都可查物流轨迹（默认模拟）
 5. 用户申请退款：
    - **仅退款**：管理端同意 → 立即 mock 退款成功
-   - **退货退款**：管理端同意 → 买家填写物流（`PUT /p/refund/express`）→ 管理端确认收货（`PUT /order/refund/receive`）→ mock 退款成功
+   - **退货退款**：管理端同意 → 买家填写物流（`PUT /p/refund/express`）→ 可查退货轨迹 → 管理端确认收货（`PUT /order/refund/receive`）→ mock 退款成功
 
 关闭 mock 后，真实 `code2session` / 微信预下单 **尚未实现**（会明确报错），见下方「Mock 与真实能力差距」。**不要**为了联调去配商户号。
 
@@ -196,6 +197,7 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 - 首页轮播/分类/标签、分类与搜索、SPU/SKU/库存、购物车
 - 下单、固定/满额运费模板（管理端运费模板）、mock 支付
 - 订单列表/详情、取消未支付、确认收货、管理端发货
+- 物流轨迹：订单发货单号 / 退货快递单号；默认模拟时间轴，可插快递100密钥
 - 未支付超时关单 + 回库存（Spring 定时，不依赖 xxl-job）
 - 支付回调幂等
 - 退款/售后：申请（仅退款 / 退货退款）→ 审核 → 买家回填物流 → 商家确认收货并 mock 退款
@@ -212,6 +214,7 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 - 生产级 HTTPS、域名、小程序审核、支付商户号均未配置
 - 我的页「分销中心 / 消息 / 足迹」仍是上游未开源占位 toast
 - 优惠券 P1 仅全店通用、一单一券；指定商品/品类券、叠加券未做
+- 物流：微信物流助手 / 订阅消息未接；真实快递100对顺丰等常要手机号，退货寄件人手机未单独存（目前复用订单收货人手机）；未知公司名可能解析不出 `com` 编码；mock 轨迹按发货/寄回时间推演，不是承运商数据
 
 ### Mock 与真实能力差距
 
@@ -222,10 +225,10 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 | 微信登录 | `SHOP_MVP_MOCK_WECHAT_LOGIN=true`，`code` 任意 | `jscode2session`，需 `WX_APP_ID` / `WX_APP_SECRET` |
 | 支付 | `SHOP_MVP_MOCK_PAY=true`，`normalPay` 当场已付 | 微信预下单 + 收银台 + HTTPS 回调验签 |
 | 退款 | 审核/确认收货只改库，`return_money_sts=1` | 微信退款 API + 退款回调；`out_refund_no` 仍为空 |
-| 物流轨迹 | 退货只存公司名+单号；正向物流仍走上游 `/delivery/check`（快递 100 占位 URL，无密钥） | 需快递 100 / 微信物流密钥，见配置占位，勿提交 |
+| 物流轨迹 | 无 `KUAIDI100_CUSTOMER`/`KEY` 时按发货/寄回时间生成模拟时间轴（会标明 mock） | 填快递100 customer+key 后走即时查询；微信物流助手未做 |
 | 订阅消息 | 无 | 模板 id 配置钩子（P1 TODO） |
 
-**P1 后续（本轮不做，仅占位）：** 物流轨迹（API + 假数据即可）、带图评价、库存预警、简单仪表盘、订阅消息配置钩子。
+**P1 后续（本轮不做，仅占位）：** 带图评价、库存预警、简单仪表盘、订阅消息配置钩子。
 
 ## 优惠券怎么用（P1）
 
@@ -238,6 +241,30 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 5. 未支付取消或超时关单会把券退回未使用（过期则标过期）。已支付不退券。
 
 `couponIds` 传的是 **用户券 ID**（`coupon_user_id`），不是模板 ID。
+
+## 物流轨迹怎么用（P1）
+
+开源 mall4j 的 `GET /delivery/check` 会把 `tz_delivery.query_url` 里的 `{dvyFlowId}` 换成单号再 GET 快递100 **旧免费接口**。那个 URL 现在没有密钥基本不可用，本仓库不再直接打它。
+
+当前行为：
+
+1. 管理端发货写入 `tz_order.dvy_id` / `dvy_flow_id`；买家退货写入 `tz_order_refund.express_name` / `express_no`。
+2. 查询走 **快递100即时查询接口**（`POST https://poll.kuaidi100.com/poll/query.do`）。`tz_delivery.query_url` 只用来解析 `type=` 公司编码（如 `shunfeng`）。
+3. `.env` 里 `KUAIDI100_CUSTOMER`、`KUAIDI100_KEY` **都留空**（默认）：返回一条按发货/寄回时间推出来的模拟轨迹，`mock=true`，文案会写明「非真实运单」。不需要任何密钥即可联调。
+4. 以后要接真轨迹：在 **本机 `.env` 或环境变量** 填快递100企业 customer 与 key（[即时查询](https://api.kuaidi100.com/document/5f0ffb5ebc8da837cbd8aefc)），**不要提交进 git**。重启 `yami-shop-api` / `yami-shop-admin`。顺丰等公司可能还要手机号，本仓库会带上订单收货人手机；退货寄件人手机没有单独存。
+
+接口：
+
+| 端 | 方法 | 路径 | 说明 |
+| --- | --- | --- | --- |
+| 买家 | GET | `/p/delivery/check?orderNumber=` 或 `/delivery/check?orderNumber=` | 正向发货；须登录且是自己的单 |
+| 买家 | GET | `/p/refund/delivery?refundSn=` | 退货；须登录且是自己的退款单 |
+| 管理端 | GET | `/order/order/delivery/check?orderNumber=` | 权限 `order:order:info` |
+| 管理端 | GET | `/order/refund/delivery?refundId=` | 权限 `order:refund:info` |
+
+uni-app：订单列表/详情「查看物流」；售后详情/列表在已填退货单号后「查看轨迹」。管理端订单详情、退款详情/确认收货弹窗展示时间轴。
+
+未发货或未填退货单号时返回空 `data` 和说明，不报错。
 
 ## 开发约定
 

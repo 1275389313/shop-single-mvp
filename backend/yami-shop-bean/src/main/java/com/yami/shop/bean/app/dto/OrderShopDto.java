@@ -84,4 +84,14 @@ public class OrderShopDto implements Serializable {
      */
     @Schema(description = "订单状态" ,requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer status;
+
+    @Schema(description = "物流公司ID")
+    private Long dvyId;
+
+    @Schema(description = "物流单号")
+    private String dvyFlowId;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @Schema(description = "发货时间")
+    private Date dvyTime;
 }

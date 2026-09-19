@@ -39,6 +39,12 @@
         class="row"
       >
         退货物流：{{ existingRefund.expressName }} {{ existingRefund.expressNo }}
+        <text
+          class="link"
+          @tap="toReturnTrack"
+        >
+          查看轨迹
+        </text>
       </view>
       <view
         v-if="existingRefund.shipTime"
@@ -319,6 +325,15 @@ const submitExpress = () => {
     expressSubmitting.value = false
   })
 }
+
+const toReturnTrack = () => {
+  if (!existingRefund.value || !existingRefund.value.refundSn) {
+    return
+  }
+  uni.navigateTo({
+    url: '/pages/express-delivery/express-delivery?refundSn=' + existingRefund.value.refundSn
+  })
+}
 </script>
 
 <style scoped lang="scss">
@@ -361,6 +376,10 @@ const submitExpress = () => {
   color: #999;
   font-size: 22rpx;
   margin-top: 12rpx;
+}
+.link {
+  margin-left: 12rpx;
+  color: #eb2444;
 }
 .picker {
   background: #fafafa;

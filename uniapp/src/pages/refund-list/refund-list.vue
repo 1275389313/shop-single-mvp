@@ -29,6 +29,12 @@
         class="row"
       >
         {{ item.expressName }} {{ item.expressNo }}
+        <text
+          class="link-inline"
+          @tap.stop="toReturnTrack(item)"
+        >
+          查看轨迹
+        </text>
       </view>
       <view class="row reason">
         {{ item.buyerMsg }}
@@ -86,6 +92,15 @@ const toDetail = (orderNumber) => {
     url: '/pages/refund-apply/refund-apply?orderNum=' + orderNumber
   })
 }
+
+const toReturnTrack = (item) => {
+  if (!item || !item.refundSn) {
+    return
+  }
+  uni.navigateTo({
+    url: '/pages/express-delivery/express-delivery?refundSn=' + item.refundSn
+  })
+}
 </script>
 
 <style scoped lang="scss">
@@ -131,5 +146,9 @@ const toDetail = (orderNumber) => {
   margin-top: 16rpx;
   color: #eb2444;
   font-size: 26rpx;
+}
+.link-inline {
+  margin-left: 12rpx;
+  color: #eb2444;
 }
 </style>

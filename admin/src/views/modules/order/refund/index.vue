@@ -87,6 +87,48 @@
           {{ current.expressNo ? (' / ' + current.expressNo) : '' }}
         </el-descriptions-item>
         <el-descriptions-item
+          v-if="tracking.data || tracking.message"
+          label="退货轨迹"
+        >
+          <el-tag
+            v-if="tracking.mock"
+            type="warning"
+            size="small"
+          >
+            模拟轨迹
+          </el-tag>
+          <el-tag
+            v-else-if="tracking.source === 'kuaidi100'"
+            type="success"
+            size="small"
+          >
+            快递100
+          </el-tag>
+          <span
+            v-if="tracking.stateText"
+            style="margin-left: 8px;"
+          >{{ tracking.stateText }}</span>
+          <el-alert
+            v-if="tracking.message"
+            :title="tracking.message"
+            :type="tracking.mock ? 'warning' : 'info'"
+            show-icon
+            :closable="false"
+            style="margin: 8px 0;"
+          />
+          <el-timeline v-if="tracking.data && tracking.data.length">
+            <el-timeline-item
+              v-for="(item, index) in tracking.data"
+              :key="index"
+              :timestamp="item.time"
+              placement="top"
+              :type="index === 0 ? 'primary' : ''"
+            >
+              {{ item.context }}
+            </el-timeline-item>
+          </el-timeline>
+        </el-descriptions-item>
+        <el-descriptions-item
           v-if="current.shipTime"
           label="买家寄回时间"
         >
@@ -183,6 +225,30 @@
           {{ current.shipTime || '-' }}
         </el-descriptions-item>
       </el-descriptions>
+      <div
+        v-if="receiveTracking.data && receiveTracking.data.length"
+        style="margin-top: 16px;"
+      >
+        <el-alert
+          v-if="receiveTracking.message"
+          :title="receiveTracking.message"
+          :type="receiveTracking.mock ? 'warning' : 'info'"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 8px;"
+        />
+        <el-timeline>
+          <el-timeline-item
+            v-for="(item, index) in receiveTracking.data"
+            :key="index"
+            :timestamp="item.time"
+            placement="top"
+            :type="index === 0 ? 'primary' : ''"
+          >
+            {{ item.context }}
+          </el-timeline-item>
+        </el-timeline>
+      </div>
       <el-form
         style="margin-top: 16px;"
         label-width="90px"
@@ -239,6 +305,8 @@ const auditSubmitting = ref(false)
 const receiveVisible = ref(false)
 const receiveSubmitting = ref(false)
 const current = ref({})
+const tracking = ref({})
+const receiveTracking = ref({})
 const auditForm = reactive({
   refundId: null,
   refundSts: 2,
@@ -285,8 +353,25 @@ const onSearch = (params, done) => {
   getDataList(page, params, done)
 }
 
+const loadRefundTracking = (refundId, target) => {
+  if (!refundId) {
+    target.value = {}
+    return
+  }
+  http({
+    url: http.adornUrl('/order/refund/delivery'),
+    method: 'get',
+    params: http.adornParams({ refundId })
+  }).then(({ data }) => {
+    target.value = data || {}
+  }).catch(() => {
+    target.value = {}
+  })
+}
+
 const openAudit = (row) => {
   current.value = row
+  tracking.value = {}
   auditReadonly.value = false
   auditForm.refundId = row.refundId
   auditForm.refundSts = 2
@@ -303,10 +388,20 @@ const openDetail = (row) => {
     current.value = data || row
     auditReadonly.value = true
     auditVisible.value = true
+    if (current.value.expressNo) {
+      loadRefundTracking(current.value.refundId, tracking)
+    } else {
+      tracking.value = {}
+    }
   }).catch(() => {
     current.value = row
     auditReadonly.value = true
     auditVisible.value = true
+    if (row.expressNo) {
+      loadRefundTracking(row.refundId, tracking)
+    } else {
+      tracking.value = {}
+    }
   })
 }
 
@@ -315,6 +410,7 @@ const openReceive = (row) => {
   receiveForm.refundId = row.refundId
   receiveForm.receiveMessage = ''
   receiveVisible.value = true
+  loadRefundTracking(row.refundId, receiveTracking)
 }
 
 const submitAudit = () => {

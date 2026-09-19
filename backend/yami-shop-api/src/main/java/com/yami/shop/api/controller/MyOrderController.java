@@ -97,6 +97,9 @@ public class MyOrderController {
         orderShopDto.setCreateTime(order.getCreateTime());
         orderShopDto.setRemarks(order.getRemarks());
         orderShopDto.setStatus(order.getStatus());
+        orderShopDto.setDvyId(order.getDvyId());
+        orderShopDto.setDvyFlowId(order.getDvyFlowId());
+        orderShopDto.setDvyTime(order.getDvyTime());
 
         double total = 0.0;
         Integer totalNum = 0;
