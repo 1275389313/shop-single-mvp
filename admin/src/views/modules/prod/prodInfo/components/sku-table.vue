@@ -87,6 +87,22 @@
           </template>
         </el-table-column>
         <el-table-column
+          prop="stocksArm"
+          label="预警阈值"
+          width="180"
+        >
+          <template #default="scope">
+            <el-input-number
+              v-model="scope.row.stocksArm"
+              :min="-1"
+              :max="999999"
+              controls-position="right"
+              placeholder="空=全局"
+              :disabled="!scope.row.status"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column
           prop="weight"
           label="商品重量(kg)"
           width="210"

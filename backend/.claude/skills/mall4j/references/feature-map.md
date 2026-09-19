@@ -51,6 +51,7 @@ C 端：小程序 `front-end/mall4m/pages/`，uni-app `front-end/mall4uni/src/pa
 | 规格 | `SpecController` | — | `prod/spec` | — | `tz_prod_prop`、`tz_prod_prop_value` |
 | 商品分组 | `ProdTagController`、`ProdTagReferenceController` | `ProdTagController` | `prod/prodTag` | 首页/分组展示 | `tz_prod_tag`、`tz_prod_tag_reference` |
 | 商品评论 | `ProdCommController` | `ProdCommController` | `prod/prodComm` | 商品详情评论 | 评论相关表 |
+| 库存预警 | `StockAlertController` | — | `prod/stockAlert` | — | `tz_sku.stocks` / `tz_sku.stocks_arm` + `tz_sys_config.STOCK_ALERT_THRESHOLD` |
 | 搜索 | — | `SearchController` | — | `search-page`、`search-prod-show` | 商品表 |
 
 品牌 `BrandController`、属性 `AttributeController` 有管理端接口，后台没有独立 `views/modules` 目录。改商品发布时跟 `prod/prodInfo` 和对应 Service，不要假设有单独菜单页。

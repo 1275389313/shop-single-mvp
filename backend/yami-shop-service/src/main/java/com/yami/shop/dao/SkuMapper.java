@@ -11,6 +11,9 @@
 package com.yami.shop.dao;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yami.shop.bean.dto.StockAlertSkuDto;
 import com.yami.shop.bean.model.Sku;
 import org.apache.ibatis.annotations.Param;
 
@@ -54,5 +57,19 @@ public interface SkuMapper extends BaseMapper<Sku> {
 	 * @param skuCollect
 	 */
 	void returnStock(@Param("skuCollect") Map<Long, Integer> skuCollect);
+
+	/**
+	 * 低于预警阈值的 SKU（可售库存 stocks，不含无限库存）。
+	 */
+	IPage<StockAlertSkuDto> pageLowStock(Page<StockAlertSkuDto> page,
+			@Param("shopId") Long shopId,
+			@Param("globalThreshold") int globalThreshold,
+			@Param("prodName") String prodName,
+			@Param("prodStatus") Integer prodStatus);
+
+	Long countLowStock(@Param("shopId") Long shopId,
+			@Param("globalThreshold") int globalThreshold,
+			@Param("prodName") String prodName,
+			@Param("prodStatus") Integer prodStatus);
 
 }

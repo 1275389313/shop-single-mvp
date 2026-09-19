@@ -12,6 +12,7 @@
     <result column="price" jdbcType="DECIMAL" property="price" />
     <result column="stocks" jdbcType="INTEGER" property="stocks" />
     <result column="actual_stocks" jdbcType="INTEGER" property="actualStocks" />
+    <result column="stocks_arm" jdbcType="INTEGER" property="stocksArm" />
     <result column="status" jdbcType="TINYINT" property="status" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
     <result column="rec_time" jdbcType="TIMESTAMP" property="recTime" />
@@ -24,7 +25,7 @@
 
     <insert id="insertBatch">
 	  	INSERT INTO `tz_sku` (
-		  `prod_id`,`properties`,`ori_price`,`price`,`stocks`,`actual_stocks`,
+		  `prod_id`,`properties`,`ori_price`,`price`,`stocks`,`actual_stocks`,`stocks_arm`,
 		  `update_time`,`rec_time`,`party_code`,`model_id`, `pic`,
 		  `sku_name`,`prod_name`,`version`,`weight`,`volume`, `status`, `is_delete`
 		)
@@ -32,7 +33,7 @@
 		<foreach collection="skuList" item="sku" separator=",">
         (
             #{prodId},#{sku.properties},#{sku.oriPrice},#{sku.price},#{sku.stocks},
-		    #{sku.actualStocks}, NOW(),NOW(),#{sku.partyCode},#{sku.modelId}, #{sku.pic},
+		    #{sku.actualStocks},#{sku.stocksArm}, NOW(),NOW(),#{sku.partyCode},#{sku.modelId}, #{sku.pic},
 		    #{sku.skuName},#{sku.prodName},0,#{sku.weight},#{sku.volume}, #{sku.status},0
 		 )
 		 </foreach>
@@ -55,4 +56,44 @@
        update tz_sku set stocks = stocks + #{changeStocks} where sku_id = #{skuId}
        </foreach>
     </update>
+
+	<sql id="lowStock_where">
+		FROM tz_sku s
+		INNER JOIN tz_prod p ON p.prod_id = s.prod_id
+		WHERE IFNULL(s.is_delete, 0) = 0
+		  AND IFNULL(s.status, 1) = 1
+		  AND p.status != -1
+		  AND p.shop_id = #{shopId}
+		  AND s.stocks &gt;= 0
+		  AND (s.stocks_arm IS NULL OR s.stocks_arm &gt;= 0)
+		  AND s.stocks &lt;= IFNULL(s.stocks_arm, #{globalThreshold})
+		  <if test="prodName != null and prodName != ''">
+			  AND p.prod_name LIKE CONCAT('%', #{prodName}, '%')
+		  </if>
+		  <if test="prodStatus != null">
+			  AND p.status = #{prodStatus}
+		  </if>
+	</sql>
+
+	<select id="pageLowStock" resultType="com.yami.shop.bean.dto.StockAlertSkuDto">
+		SELECT
+			s.sku_id,
+			s.prod_id,
+			p.prod_name,
+			IFNULL(s.pic, p.pic) AS pic,
+			p.status AS prod_status,
+			s.sku_name,
+			s.properties,
+			s.stocks,
+			s.actual_stocks,
+			s.stocks_arm,
+			IFNULL(s.stocks_arm, #{globalThreshold}) AS effective_threshold
+		<include refid="lowStock_where"/>
+		ORDER BY s.stocks ASC, s.sku_id ASC
+	</select>
+
+	<select id="countLowStock" resultType="java.lang.Long">
+		SELECT COUNT(1)
+		<include refid="lowStock_where"/>
+	</select>
 </mapper>

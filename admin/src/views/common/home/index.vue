@@ -1,5 +1,33 @@
 <template>
   <div class="mod-home">
+    <el-card
+      v-if="isAuth('prod:stockAlert:page')"
+      shadow="never"
+      class="stock-alert-home"
+    >
+      <div class="stock-alert-home__row">
+        <div>
+          <div class="stock-alert-home__title">
+            库存预警
+          </div>
+          <p class="stock-alert-home__hint">
+            上架 SKU 可售库存 ≤ 全局阈值 {{ globalThreshold }} 时计入。可在「产品管理 → 库存预警」改阈值。
+          </p>
+        </div>
+        <el-badge
+          :value="lowStockCount"
+          :hidden="!lowStockCount"
+          :max="99"
+        >
+          <el-button
+            type="warning"
+            @click="goStockAlert"
+          >
+            查看低库存
+          </el-button>
+        </el-badge>
+      </div>
+    </el-card>
     <p>一个基于spring boot、spring oauth2.0、mybatis、redis的轻量级、前后端分离、拥有完整sku和下单流程的完全开源商城</p>
     <p>&nbsp;</p>
     <p>该项目仅供学习参考、可供个人学习使用、如需商用联系作者进行授权，否则必将追究法律责任</p>
@@ -127,8 +155,55 @@
   </div>
 </template>
 
+<script setup>
+import { isAuth } from '@/utils'
+
+const router = useRouter()
+const lowStockCount = ref(0)
+const globalThreshold = ref(10)
+
+const goStockAlert = () => {
+  router.push('/prod/stockAlert')
+}
+
+onMounted(() => {
+  if (!isAuth('prod:stockAlert:page')) {
+    return
+  }
+  http({
+    url: http.adornUrl('/prod/stockAlert/config'),
+    method: 'get',
+    params: http.adornParams()
+  }).then(({ data }) => {
+    lowStockCount.value = data.count || 0
+    if (data.globalThreshold != null) {
+      globalThreshold.value = data.globalThreshold
+    }
+  }).catch(() => {})
+})
+</script>
+
 <style lang="scss" scoped>
 .mod-home {
   line-height: 1.5;
+}
+.stock-alert-home {
+  margin-bottom: 20px;
+}
+.stock-alert-home__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.stock-alert-home__title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.stock-alert-home__hint {
+  margin: 6px 0 0;
+  color: #909399;
+  font-size: 13px;
 }
 </style>

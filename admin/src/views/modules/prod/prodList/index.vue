@@ -29,6 +29,31 @@
         >
           批量删除
         </el-button>
+        <el-badge
+          v-if="isAuth('prod:stockAlert:page')"
+          :value="lowStockCount"
+          :hidden="!lowStockCount"
+          :max="99"
+        >
+          <el-button
+            type="warning"
+            @click="goStockAlert"
+          >
+            库存预警
+          </el-button>
+        </el-badge>
+      </template>
+
+      <template #totalStocks="scope">
+        <span>{{ scope.row.totalStocks }}</span>
+        <el-tag
+          v-if="isProdLow(scope.row)"
+          type="danger"
+          size="small"
+          style="margin-left: 8px"
+        >
+          低库存
+        </el-tag>
       </template>
 
       <template #status="scope">
@@ -70,6 +95,8 @@ const permission = reactive({
   delBtn: isAuth('prod:prod:delete')
 })
 const dataList = ref([])
+const lowStockCount = ref(0)
+const globalThreshold = ref(10)
 const page = reactive({
   total: 0, // 总页数
   currentPage: 1, // 当前页数
@@ -160,6 +187,41 @@ const onDelete = (id) => {
 const onSearch = (params, done) => {
   getDataList(page, params, done)
 }
+
+const isProdLow = (row) => {
+  if (row.status !== 1) {
+    return false
+  }
+  const stocks = row.totalStocks
+  if (stocks == null || stocks < 0) {
+    return false
+  }
+  return stocks <= globalThreshold.value
+}
+
+const goStockAlert = () => {
+  router.push('/prod/stockAlert')
+}
+
+const loadStockAlert = () => {
+  if (!isAuth('prod:stockAlert:page')) {
+    return
+  }
+  http({
+    url: http.adornUrl('/prod/stockAlert/config'),
+    method: 'get',
+    params: http.adornParams()
+  }).then(({ data }) => {
+    lowStockCount.value = data.count || 0
+    if (data.globalThreshold != null) {
+      globalThreshold.value = data.globalThreshold
+    }
+  }).catch(() => {})
+}
+
+onMounted(() => {
+  loadStockAlert()
+})
 
 const dataListSelections = ref([])
 /**
