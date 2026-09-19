@@ -50,7 +50,7 @@
      | ---------------------------------->  |  status=5
 ```
 
-未支付超时：`OrderAutoCloseScheduler` 每分钟扫描 `status=1` 且更新时间早于 N 分钟的订单，调用 `OrderService.cancelOrders`（status=6 + `returnStock`）。不依赖 xxl-job。
+未支付超时：`OrderAutoCloseScheduler` 每分钟扫描 `status=1` 且更新时间早于 N 分钟的订单，调用 `OrderService.cancelOrders`（status=6 + `returnStock` + 退回已核销优惠券）。不依赖 xxl-job。
 
 ## 接口速查
 
@@ -58,8 +58,12 @@
 | --- | --- | --- | --- |
 | 登录 | POST | `/wx/login` | mock：`code` 任意；真实微信 TODO |
 | 登录 | POST | `/login` | 账号密码（加密） |
-| 下单确认 | POST | `/p/order/confirm` | 需登录 |
-| 提交订单 | POST | `/p/order/submit` | 需登录，扣库存 |
+| 下单确认 | POST | `/p/order/confirm` | 需登录；`couponIds` 为用户券 ID |
+| 提交订单 | POST | `/p/order/submit` | 需登录，扣库存并核销优惠券 |
+| 领券中心 | GET | `/coupon/list` | 可匿名 |
+| 领取 | POST | `/p/coupon/receive` | `{ "couponId": 模板ID }` |
+| 我的券 | GET | `/p/coupon/myList` | `status` 0未使用 1已用 2过期 |
+| 优惠券管理 | | `/coupon/coupon/**` | 管理端 8085 |
 | 支付 | POST | `/p/order/pay` 或 `/p/order/normalPay` | mock 时当场已付 |
 | 回调 | POST | `/notice/pay/mock` | `{ "payNo": "..." }` 幂等 |
 | 发货 | PUT | `/order/order/delivery` | 管理端 |

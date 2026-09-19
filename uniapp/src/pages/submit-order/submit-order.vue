@@ -112,10 +112,22 @@
                 优惠券：
               </text>
               <text
-                v-if="!coupons.canUseCoupons"
+                v-if="Number(shopReduce) > 0"
+                class="item-txt"
+              >
+                -￥{{ Number(shopReduce).toFixed(2) }}
+              </text>
+              <text
+                v-else-if="!coupons.canUseCoupons || !coupons.canUseCoupons.length"
                 class="item-txt"
               >
                 暂无可用
+              </text>
+              <text
+                v-else
+                class="item-txt"
+              >
+                请选择
               </text>
               <text class="coupon-btn">
                 {{ coupons.totalLength ? coupons.totalLength : 0 }}张
@@ -266,6 +278,7 @@
                 :item="item"
                 order="true"
                 can-use="true"
+                :checked="couponIds.includes(item.couponId)"
                 @check-coupon="checkCoupon"
               />
             </view>
@@ -298,6 +311,8 @@
 </template>
 
 <script setup>
+import Coupon from '@/components/coupon/coupon.vue'
+
 const wxs = number()
 let orderEntry = '0' // 订单入口 0购物车 1立即购买
 /**
@@ -322,14 +337,14 @@ onShow(() => {
   loadOrderData()
 })
 
-let couponIds = []
+const couponIds = ref([])
 const coupons = ref({})
 const total = ref(0)
 const actualTotal = ref(0)
 const orderItems = ref([])
 const totalCount = ref(0)
 const transfee = ref(0)
-const shopReduce = ref('')
+const shopReduce = ref(0)
 /**
  * 加载订单数据
  */
@@ -348,7 +363,7 @@ const loadOrderData = () => {
       addrId,
       orderItem: orderEntry === '1' ? JSON.parse(uni.getStorageSync('orderItem')) : undefined,
       basketIds: orderEntry === '0' ? JSON.parse(uni.getStorageSync('basketIds')) : undefined,
-      couponIds,
+      couponIds: couponIds.value,
       userChangeCoupon: 1
     }
   })
@@ -373,6 +388,12 @@ const loadOrderData = () => {
           canUseCoupons,
           unCanUseCoupons
         }
+      } else {
+        coupons.value = {
+          totalLength: 0,
+          canUseCoupons: [],
+          unCanUseCoupons: []
+        }
       }
       orderItems.value = orderItemsData
       actualTotal.value = data.actualTotal
@@ -380,7 +401,7 @@ const loadOrderData = () => {
       totalCount.value = data.totalCount
       userAddr.value = data.userAddr
       transfee.value = data.shopCartOrders[0].transfee
-      shopReduce.value = data.shopCartOrders[0].shopReduce
+      shopReduce.value = data.shopCartOrders[0].shopReduce || 0
     })
     .catch(err => {
       uni.hideLoading()
@@ -399,7 +420,7 @@ const chooseCouponErrHandle = (res) => {
       icon: 'none',
       duration: 3000,
       success: () => {
-        couponIds = []
+        couponIds.value = []
       }
     })
     setTimeout(() => {
@@ -514,11 +535,12 @@ const choosedCoupon = () => {
  * 优惠券子组件发过来
  */
 const checkCoupon = (e) => {
-  const index = couponIds.indexOf(e.detail.couponId)
+  const couponId = e?.detail?.couponId || e?.couponId
+  const index = couponIds.value.indexOf(couponId)
   if (index === -1) {
-    couponIds.push(e.detail.couponId)
+    couponIds.value = [couponId]
   } else {
-    couponIds.splice(index, 1)
+    couponIds.value.splice(index, 1)
   }
 }
 </script>

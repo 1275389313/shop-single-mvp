@@ -283,15 +283,13 @@ const toDistCenter = () => {
   })
 }
 const toCouponCenter = () => {
-  uni.showToast({
-    icon: 'none',
-    title: '该功能未开源'
+  uni.navigateTo({
+    url: '/pages/coupon-center/coupon-center'
   })
 }
 const toMyCouponPage = () => {
-  uni.showToast({
-    icon: 'none',
-    title: '该功能未开源'
+  uni.navigateTo({
+    url: '/pages/my-coupon/my-coupon'
   })
 }
 const handleTips = () => {

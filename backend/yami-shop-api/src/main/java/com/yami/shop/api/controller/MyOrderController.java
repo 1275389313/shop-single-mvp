@@ -93,6 +93,7 @@ public class MyOrderController {
         orderShopDto.setOrderItemDtos(orderItemList);
         orderShopDto.setTransfee(order.getFreightAmount());
         orderShopDto.setReduceAmount(order.getReduceAmount());
+        orderShopDto.setCouponMoney(order.getReduceAmount());
         orderShopDto.setCreateTime(order.getCreateTime());
         orderShopDto.setRemarks(order.getRemarks());
         orderShopDto.setStatus(order.getStatus());

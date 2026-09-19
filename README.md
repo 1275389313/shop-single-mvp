@@ -35,12 +35,14 @@ Compose 只起 **MySQL + Redis**。首次启动会导入：
 2. `backend/db/02-patch-phase1.sql`（`tz_user.wx_open_id` 等）
 3. `backend/db/03-patch-phase2.sql`（退款审核 / 店铺设置菜单）
 4. `backend/db/04-patch-phase3.sql`（确认退货收货权限）
+5. `backend/db/05-patch-coupon.sql`（优惠券表 + 菜单 + 演示满减/折扣券）
 
-**已有数据卷不会自动跑新 SQL。** Phase 1 之后升级请再执行一次：
+**已有数据卷不会自动跑新 SQL。** 升级请再执行：
 
 ```bash
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/03-patch-phase2.sql
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/04-patch-phase3.sql
+docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/05-patch-coupon.sql
 ```
 
 没有 Docker 时，自行安装 MySQL/Redis，导入上述 SQL，账号默认 `root/root`，库名 `yami_shops`。
@@ -86,7 +88,7 @@ pnpm dev
 
 `admin/.env.development` 里 `VITE_APP_BASE_API=http://127.0.0.1:8085`。浏览器打开 Vite 提示的地址（本仓库默认 **http://localhost:9527**）。
 
-导入 `03-patch-phase2.sql` 后请**重新登录**管理端，菜单才会出现「订单管理 → 退款审核」「门店管理 → 店铺设置」。`04-patch-phase3.sql` 为退款审核增加「确认收货退款」权限；未导入时，拥有审核权限的账号仍可确认退货（接口兼容 `order:refund:audit`）。
+导入 `05-patch-coupon.sql` 后请**重新登录**管理端，菜单才会出现「门店管理 → 优惠券」。`04-patch-phase3.sql` 为退款审核增加「确认收货退款」权限；未导入时，拥有审核权限的账号仍可确认退货（接口兼容 `order:refund:audit`）。
 
 ## 4. uni-app / 微信小程序
 
@@ -144,7 +146,8 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    | 分类 / 搜索 | 分类 Tab、搜索页 | 分类与 `prod` 列表接口 |
    | 商品 + SKU | 商品详情 | `GET /prod/prodInfo` |
    | 购物车 | 购物车 Tab | `/p/shopCart/**` |
-   | 结算 | 提交订单（选地址，看运费） | `POST /p/order/confirm` → `POST /p/order/submit` |
+   | 领券 | 首页「领优惠券」或 我的 → 领券中心 | `GET /coupon/list`、`POST /p/coupon/receive` |
+   | 结算 | 提交订单（选地址，选优惠券，看运费） | `POST /p/order/confirm`（`couponIds` 为用户券 ID）→ `POST /p/order/submit`（核销） |
    | 支付 | 自动调 mock 支付 | `POST /p/order/normalPay`（当场 `status=2`） |
    | 订单 | 订单列表 / 详情 | `/p/myOrder/**`；详情可 **确认收货** |
    | 退款申请 | 订单详情 / 列表「申请退款」 | `POST /p/refund/apply` |
@@ -152,6 +155,7 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    | 地址 | 我的 → 收货地址 | `/p/address/**` |
 
 6. 管理端（浏览器 `http://localhost:9527`，账号 `admin / 123456`，滑块验证码）：
+   - **优惠券** 新建满减/折扣、投放、改库存与有效期
    - **订单管理** 发货（待发货订单）
    - **退款审核** 同意 / 拒绝（`PUT /order/refund/audit`）。仅退款同意=立刻 mock 退款；退货退款同意=等买家寄回。
    - 买家填写物流后，**确认收货退款**（`PUT /order/refund/receive`）。只改库，**不会**打微信退款。
@@ -161,6 +165,7 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    - 开发者工具在 A 电脑、API 在 B 电脑：把 `VITE_APP_BASE_API` 改成 B 的局域网 IP，并勾选不校验域名
    - `request:fail`：API 没起来，或端口不是 8086
    - 登录后立刻过期：Redis 没起
+   - 管理端看不到优惠券菜单：未导入 `05-patch-coupon.sql`，或导入后未重新登录
    - 管理端看不到退款菜单：未导入 `03-patch-phase2.sql`，或导入后未重新登录
 
 H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.login`，用 **模拟微信登录**。
@@ -195,7 +200,8 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 - 支付回调幂等
 - 退款/售后：申请（仅退款 / 退货退款）→ 审核 → 买家回填物流 → 商家确认收货并 mock 退款
 - 地址 CRUD、商品上下架、Banner、店铺设置页（单店）
-- 管理端操作日志（`@SysLog`，如发货、退款审核、确认退货）
+- 管理端操作日志（`@SysLog`，如发货、退款审核、确认退货、优惠券）
+- 优惠券：管理端满减/折扣、投放与库存；买家领取、结算选择、下单核销；未支付取消退券
 
 明确未完成或薄弱：
 
@@ -204,7 +210,8 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 - 对象存储目前是七牛钩子，**腾讯云 COS** 需自写；本地文件上传即可跑通
 - 管理端验证码依赖 anji captcha 缓存，环境不齐时可能影响登录（见上游文档）
 - 生产级 HTTPS、域名、小程序审核、支付商户号均未配置
-- 我的页「分销中心 / 优惠券 / 消息 / 足迹」仍是上游未开源占位 toast
+- 我的页「分销中心 / 消息 / 足迹」仍是上游未开源占位 toast
+- 优惠券 P1 仅全店通用、一单一券；指定商品/品类券、叠加券未做
 
 ### Mock 与真实能力差距
 
@@ -218,7 +225,19 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 | 物流轨迹 | 退货只存公司名+单号；正向物流仍走上游 `/delivery/check`（快递 100 占位 URL，无密钥） | 需快递 100 / 微信物流密钥，见配置占位，勿提交 |
 | 订阅消息 | 无 | 模板 id 配置钩子（P1 TODO） |
 
-**P1 后续（本轮不做，仅占位）：** 优惠券、物流轨迹（API + 假数据即可）、带图评价、库存预警、简单仪表盘、订阅消息配置钩子。
+**P1 后续（本轮不做，仅占位）：** 物流轨迹（API + 假数据即可）、带图评价、库存预警、简单仪表盘、订阅消息配置钩子。
+
+## 优惠券怎么用（P1）
+
+开源 mall4j **没有**优惠券表，只留了 `OrderParam.couponIds` 和确认/提交监听顺序位。本仓库补了 `tz_coupon` / `tz_coupon_user`，接到原有结算 UI。
+
+1. 导入 `backend/db/05-patch-coupon.sql`，**重新登录**管理端。
+2. 管理端「门店管理 → 优惠券」：新建或编辑 **满减** / **折扣**，填门槛、库存、领取时间、有效天数，状态选 **投放**。SQL 已预置「满50减10」「全店8.5折」。
+3. 小程序/H5 登录后：首页「领优惠券」或「我的 → 领券中心」领取；「我的优惠券」可查看。
+4. 结算页点优惠券，选一张（一单一券）。`POST /p/order/confirm` 按商品总额校验门槛并算出减免；`POST /p/order/submit` 核销。订单详情「优惠券」即 `reduce_amount`。
+5. 未支付取消或超时关单会把券退回未使用（过期则标过期）。已支付不退券。
+
+`couponIds` 传的是 **用户券 ID**（`coupon_user_id`），不是模板 ID。
 
 ## 开发约定
 

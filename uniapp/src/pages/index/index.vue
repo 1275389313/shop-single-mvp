@@ -396,9 +396,8 @@ const addToCart = (item) => {
 }
 
 const toCouponCenter = () => {
-  uni.showToast({
-    icon: 'none',
-    title: '该功能未开源'
+  uni.navigateTo({
+    url: '/pages/coupon-center/coupon-center'
   })
 }
 
