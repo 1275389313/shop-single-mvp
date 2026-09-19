@@ -1,0 +1,84 @@
+# 下单 → 支付 → 回调 → 发货
+
+开源 mall4j 的支付在用户端会直接把订单标为已付。本仓库把这条路径做成可开关的 **mock**，并补上幂等回调接口。
+
+## 状态
+
+`tz_order.status`（`OrderStatus`）:
+
+| 值 | 含义 |
+| --- | --- |
+| 1 | 待付款 UNPAY |
+| 2 | 待发货 PADYED |
+| 3 | 待收货 CONSIGNMENT |
+| 4 | 待评价 CONFIRM（用户确认收货后上游写成 5，见下） |
+| 5 | 成功 SUCCESS |
+| 6 | 关闭 CLOSE（未支付超时/取消，会回库存） |
+
+上游 `MyOrderController.receipt` 调 `confirmOrder`，SQL 把状态写成 **5** 而不是 4。评价流程不完整，按成功单处理即可。
+
+## 时序（mock）
+
+```text
+用户端 uni-app                         yami-shop-api                         DB / Redis
+     |                                      |                                  |
+     |  POST /p/order/confirm               |                                  |
+     | ---------------------------------->  |  算运费、写 ConfirmOrderCache     |
+     |  POST /p/order/submit                |                                  |
+     | ---------------------------------->  |  扣 SKU 库存，status=1           |
+     |                                      |  写 tz_order + settlement        |
+     |  POST /p/order/normalPay             |                                  |
+     |  {orderNumbers, payType:1}           |                                  |
+     | ---------------------------------->  |  生成 payNo                      |
+     |                                      |  mock.pay=true → paySuccess()    |
+     |                                      |  settlement.pay_status=1         |
+     |                                      |  order.status=2 is_payed=1       |
+     |                                      |  发布 PaySuccessOrderEvent       |
+     |                                      |                                  |
+     |  (可选) POST /notice/pay/mock        |                                  |
+     |  {payNo}  无需登录，幂等              |                                  |
+     | ---------------------------------->  |  已支付则直接成功返回             |
+
+管理端 mall4v                           yami-shop-admin
+     |                                      |
+     |  PUT /order/order/delivery           |
+     |  {orderNumber, dvyId, dvyFlowId}     |
+     | ---------------------------------->  |  status=3，写入物流单号           |
+
+用户端
+     |  PUT /p/myOrder/receipt/{orderNumber}
+     | ---------------------------------->  |  status=5
+```
+
+未支付超时：`OrderAutoCloseScheduler` 每分钟扫描 `status=1` 且更新时间早于 N 分钟的订单，调用 `OrderService.cancelOrders`（status=6 + `returnStock`）。不依赖 xxl-job。
+
+## 接口速查
+
+| 步骤 | 方法 | 路径 | 说明 |
+| --- | --- | --- | --- |
+| 登录 | POST | `/wx/login` | mock：`code` 任意；真实微信 TODO |
+| 登录 | POST | `/login` | 账号密码（加密） |
+| 下单确认 | POST | `/p/order/confirm` | 需登录 |
+| 提交订单 | POST | `/p/order/submit` | 需登录，扣库存 |
+| 支付 | POST | `/p/order/pay` 或 `/p/order/normalPay` | mock 时当场已付 |
+| 回调 | POST | `/notice/pay/mock` | `{ "payNo": "..." }` 幂等 |
+| 发货 | PUT | `/order/order/delivery` | 管理端 |
+| 确认收货 | PUT | `/p/myOrder/receipt/{orderNumber}` | 用户端 |
+| 退款申请 | POST | `/p/refund/apply` | 用户端 |
+| 退款审核 | PUT | `/order/refund/audit` | 管理端 |
+
+## curl 示例（mock 支付回调）
+
+先拿到登录 token 和下单后的 `payNo`（`normalPay` 响应里）。若走了 mock 当场支付，再调回调应直接成功（幂等）：
+
+```bash
+curl -s -X POST http://127.0.0.1:8086/notice/pay/mock \
+  -H 'Content-Type: application/json' \
+  -d '{"payNo":"REPLACE_PAY_NO","bizPayNo":"MOCK-TEST"}'
+```
+
+## 真实微信支付（未实现）
+
+1. `SHOP_MVP_MOCK_PAY=false`
+2. 填写 `WX_PAY_MCH_ID` / `WX_PAY_API_KEY` / `WX_PAY_NOTIFY_URL`（**必须 HTTPS**）
+3. 在 `PayController` 里补预下单，在 `POST /notice/pay/wechat` 验签后调 `payService.paySuccess(outTradeNo, transactionId)`
