@@ -38,7 +38,7 @@ Compose 只起 **MySQL + Redis**。首次启动会导入：
 **已有数据卷不会自动跑新 SQL。** Phase 1 之后升级请再执行一次：
 
 ```bash
-docker compose exec -T mysql mysql -uroot -proot yami_shops < backend/db/03-patch-phase2.sql
+docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/03-patch-phase2.sql
 ```
 
 没有 Docker 时，自行安装 MySQL/Redis，导入上述 SQL，账号默认 `root/root`，库名 `yami_shops`。
