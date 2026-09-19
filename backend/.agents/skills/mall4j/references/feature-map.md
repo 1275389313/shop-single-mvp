@@ -104,6 +104,7 @@ C 端：小程序 `front-end/mall4m/pages/`，uni-app `front-end/mall4uni/src/pa
 | --- | --- | --- |
 | 我的订单 / 详情 / 用户侧操作 | `MyOrderController` | `orderList`、`order-detail` |
 | 后台订单查询 / 详情 / 发货 / 导出 | 管理端 `OrderController` | `order/order` |
+| 数据看板 GMV/订单/退款 | 管理端 `DashboardController` | `order/dashboard` |
 | 物流查询 | 管理端/用户端 `DeliveryController` | `express-delivery` |
 | 超时取消、自动确认收货 | `yami-shop-admin/.../task/OrderTask.java` | — |
 | 状态枚举 | `yami-shop-bean/.../enums/OrderStatus.java` | — |

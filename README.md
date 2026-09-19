@@ -37,6 +37,7 @@ Compose 只起 **MySQL + Redis**。首次启动会导入：
 4. `backend/db/04-patch-phase3.sql`（确认退货收货权限）
 5. `backend/db/05-patch-coupon.sql`（优惠券表 + 菜单 + 演示满减/折扣券）
 6. `backend/db/06-patch-stock-alert.sql`（SKU `stocks_arm` + 全局阈值配置 + 库存预警菜单）
+7. `backend/db/07-patch-dashboard.sql`（数据看板菜单）
 
 **已有数据卷不会自动跑新 SQL。** 升级请再执行：
 
@@ -45,6 +46,7 @@ docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/04-patch-phase3.sql
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/05-patch-coupon.sql
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/06-patch-stock-alert.sql
+docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/07-patch-dashboard.sql
 ```
 
 没有 Docker 时，自行安装 MySQL/Redis，导入上述 SQL，账号默认 `root/root`，库名 `yami_shops`。
@@ -159,6 +161,7 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    | 地址 | 我的 → 收货地址 | `/p/address/**` |
 
 6. 管理端（浏览器 `http://localhost:9527`，账号 `admin / 123456`，滑块验证码）：
+   - **数据看板** 首页卡片 +「订单管理 → 数据看板」：今日/近7日/近30日/累计 GMV、已付/待付/退款
    - **库存预警** 全局阈值、低于阈值的 SKU 列表；商品发布页可为 SKU 填独立阈值
    - **优惠券** 新建满减/折扣、投放、改库存与有效期
    - **订单管理** 发货（待发货订单）；已发货订单详情可看物流时间轴（无密钥时为模拟轨迹）
@@ -172,6 +175,7 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    - 登录后立刻过期：Redis 没起
    - 管理端看不到优惠券菜单：未导入 `05-patch-coupon.sql`，或导入后未重新登录
    - 管理端看不到库存预警菜单：未导入 `06-patch-stock-alert.sql`，或导入后未重新登录
+   - 管理端看不到数据看板菜单：未导入 `07-patch-dashboard.sql`，或导入后未重新登录
    - 管理端看不到退款菜单：未导入 `03-patch-phase2.sql`，或导入后未重新登录
 
 H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.login`，用 **模拟微信登录**。
@@ -211,6 +215,7 @@ H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.
 - 管理端操作日志（`@SysLog`，如发货、退款审核、确认退货、优惠券）
 - 优惠券：管理端满减/折扣、投放与库存；买家领取、结算选择、下单核销；未支付取消退券
 - 库存预警：全局阈值（`tz_sys_config`）+ 可选 SKU 阈值（`tz_sku.stocks_arm`）；管理端列表与首页/商品列表角标
+- 数据看板：管理端首页卡片 +「订单管理 → 数据看板」；今日/近7日/近30日/累计 GMV、已付/待付/关闭、退款成功与处理中
 
 明确未完成或薄弱：
 
@@ -220,6 +225,7 @@ H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.
 - 生产级 HTTPS、域名、小程序审核、支付商户号均未配置
 - 我的页「分销中心 / 消息 / 足迹」仍是上游未开源占位 toast
 - 优惠券 P1 仅全店通用、一单一券；指定商品/品类券、叠加券未做
+- 数据看板：自然日按上海时区；GMV 按 **支付时间**，样例 SQL 订单多在 2019 年所以今日/近7日/近30日经常为 0（看累计或新 mock 单）；不是财务对账、不含优惠拆分、不接微信账单
 - 物流：微信物流助手 / 订阅消息未接；真实快递100对顺丰等常要手机号，退货寄件人手机未单独存（目前复用订单收货人手机）；未知公司名可能解析不出 `com` 编码；mock 轨迹按发货/寄回时间推演，不是承运商数据
 
 ### Mock 与真实能力差距
@@ -235,7 +241,7 @@ H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.
 | 评价晒图 | 本地上传 + 可选占位图，评价立刻上架 | 七牛/COS 真实 CDN；人工审核流可把默认 status 改回 0 |
 | 订阅消息 | 无 | 模板 id 配置钩子（P1 TODO） |
 
-**P1 后续（本轮不做，仅占位）：** 简单仪表盘、订阅消息配置钩子。
+**P1 后续（本轮不做，仅占位）：** 订阅消息配置钩子。
 
 ## 优惠券怎么用（P1）
 
@@ -308,6 +314,24 @@ uni-app：订单列表/详情「查看物流」；售后详情/列表在已填�
 | 管理端 | PUT | `/prod/stockAlert/config` | `{ "globalThreshold": 10 }` |
 | 管理端 | GET | `/prod/stockAlert/page` | 低库存 SKU 分页，`prodName` / `prodStatus` |
 | 管理端 | PUT | `/prod/stockAlert/sku` | `{ "skuId", "stocksArm" }` |
+
+## 数据看板怎么用（P1）
+
+开源 mall4j 文案里有「统计报表」，仓库里 **没有** 对应管理端接口。本仓库用本店 `tz_order` / `tz_order_refund` 做一次聚合，**不读任何密钥**，不改 mock 支付。
+
+1. 导入 `backend/db/07-patch-dashboard.sql`，**重新登录**管理端。
+2. 首页卡片，或「订单管理 → 数据看板」：今日 / 近7日 / 近30日 / 累计。
+3. 口径：
+   - **GMV**：窗口内 `pay_time` 且 `is_payed=1` 的 `actual_total` 之和（含 mock 支付，**不**按退款冲减）
+   - **下单数**：窗口内 `create_time`（含未付、关闭）
+   - **待付款 / 关闭**：当前 `status=1` / `status=6` 且下单时间落在窗口
+   - **退款成功**：`return_money_sts=1`，按 `refund_time`；**处理中**：`return_money_sts=0`，按 `apply_time`
+   - **净额** = GMV − 退款成功金额（处理中未扣）
+4. 近30日柱状/折线用已有 echarts。初始化样例订单多在 **2019**，今日窗口常为 0；看「累计」或走一遍 mock 下单支付。
+
+| 端 | 方法 | 路径 | 说明 |
+| --- | --- | --- | --- |
+| 管理端 | GET | `/order/dashboard` | 权限 `order:dashboard:info` |
 
 ## 开发约定
 
