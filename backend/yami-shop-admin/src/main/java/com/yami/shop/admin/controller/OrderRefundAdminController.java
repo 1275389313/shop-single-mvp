@@ -2,6 +2,7 @@ package com.yami.shop.admin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yami.shop.bean.app.param.OrderRefundAuditParam;
+import com.yami.shop.bean.app.param.OrderRefundReceiveParam;
 import com.yami.shop.bean.model.OrderRefund;
 import com.yami.shop.common.annotation.SysLog;
 import com.yami.shop.common.response.ServerResponseEntity;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Admin refund audit. Wired to mall4v 退款审核 page.
+ * Admin refund audit + confirm returned goods. Wired to mall4v 退款审核 page.
  */
 @RestController
 @RequestMapping("/order/refund")
@@ -43,9 +44,18 @@ public class OrderRefundAdminController {
         return ServerResponseEntity.success(orderRefundService.audit(shopId, param));
     }
 
+    @PutMapping("/receive")
+    @SysLog("确认退货并退款")
+    @PreAuthorize("@pms.hasPermission('order:refund:receive') or @pms.hasPermission('order:refund:audit')")
+    public ServerResponseEntity<OrderRefund> receive(@Valid @RequestBody OrderRefundReceiveParam param) {
+        Long shopId = SecurityUtils.getSysUser().getShopId();
+        return ServerResponseEntity.success(orderRefundService.confirmReceive(shopId, param));
+    }
+
     @GetMapping("/info")
     @PreAuthorize("@pms.hasPermission('order:refund:info')")
     public ServerResponseEntity<OrderRefund> info(@RequestParam Long refundId) {
-        return ServerResponseEntity.success(orderRefundService.getById(refundId));
+        Long shopId = SecurityUtils.getSysUser().getShopId();
+        return ServerResponseEntity.success(orderRefundService.getShopRefund(shopId, refundId));
     }
 }

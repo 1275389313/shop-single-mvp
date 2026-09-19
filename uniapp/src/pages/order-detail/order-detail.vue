@@ -191,10 +191,32 @@
         <view class="msg-item">
           <view class="item">
             <text class="item-tit">
-              退款状态：
+              售后状态：
             </text>
             <text class="item-txt">
-              {{ refund.refundSts === 1 ? '待商家审核' : (refund.refundSts === 2 ? '商家已同意' : '商家已拒绝') }}
+              {{ refundFlowText(refund) }}
+            </text>
+          </view>
+          <view
+            v-if="refund.applyType === 2"
+            class="item"
+          >
+            <text class="item-tit">
+              申请类型：
+            </text>
+            <text class="item-txt">
+              退货退款
+            </text>
+          </view>
+          <view
+            v-if="refund.expressNo"
+            class="item"
+          >
+            <text class="item-tit">
+              退货物流：
+            </text>
+            <text class="item-txt">
+              {{ refund.expressName }} {{ refund.expressNo }}
             </text>
           </view>
         </view>
@@ -235,6 +257,20 @@
             申请退款
           </text>
           <text
+            v-if="canFillExpress"
+            class="apply-service"
+            @tap="toRefundApply"
+          >
+            {{ refund && refund.expressNo ? '修改退货物流' : '填写退货物流' }}
+          </text>
+          <text
+            v-if="refund && refund.refundSts !== 3 && !canFillExpress"
+            class="apply-service"
+            @tap="toRefundApply"
+          >
+            售后详情
+          </text>
+          <text
             v-if="status==3"
             class="buy-again"
             @tap="onConfirmReceive"
@@ -248,6 +284,8 @@
 </template>
 
 <script setup>
+import { refundFlowText, canEditReturnExpress } from '@/utils/refund.js'
+
 const wxs = number()
 
 /**
@@ -255,6 +293,12 @@ const wxs = number()
  */
 onLoad((options) => {
   loadOrderDetail(options.orderNum)
+})
+
+onShow(() => {
+  if (orderNumber.value) {
+    loadRefund(orderNumber.value)
+  }
 })
 
 /**
@@ -283,6 +327,7 @@ const canRefund = computed(() => {
   const sts = Number(status.value)
   return (sts === 2 || sts === 3 || sts === 5) && (!refund.value || refund.value.refundSts === 3)
 })
+const canFillExpress = computed(() => canEditReturnExpress(refund.value))
 /**
  * 加载订单数据
  */

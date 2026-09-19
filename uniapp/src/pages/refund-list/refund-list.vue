@@ -10,12 +10,12 @@
       v-for="item in list"
       :key="item.refundId"
       class="card"
-      @tap="toOrder(item.orderNumber)"
+      @tap="toDetail(item.orderNumber)"
     >
       <view class="head">
         <text>退款编号 {{ item.refundSn }}</text>
         <text :class="['sts', item.refundSts === 3 ? 'gray' : '']">
-          {{ item.refundSts === 1 ? '待审核' : (item.refundSts === 2 ? '已同意' : '已拒绝') }}
+          {{ refundFlowText(item) }}
         </text>
       </view>
       <view class="row">
@@ -24,19 +24,34 @@
       <view class="row">
         {{ item.applyType === 2 ? '退货退款' : '仅退款' }} · ￥{{ item.refundAmount }}
       </view>
+      <view
+        v-if="item.expressNo"
+        class="row"
+      >
+        {{ item.expressName }} {{ item.expressNo }}
+      </view>
       <view class="row reason">
         {{ item.buyerMsg }}
+      </view>
+      <view
+        v-if="canEditReturnExpress(item)"
+        class="link"
+        @tap.stop="toDetail(item.orderNumber)"
+      >
+        {{ item.expressNo ? '修改退货物流' : '填写退货物流' }}
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
+import { refundFlowText, canEditReturnExpress } from '@/utils/refund.js'
+
 const list = ref([])
 const current = ref(1)
 const pages = ref(0)
 
-onLoad(() => {
+onShow(() => {
   load(1)
 })
 
@@ -66,9 +81,9 @@ const load = (pageNo) => {
   })
 }
 
-const toOrder = (orderNumber) => {
+const toDetail = (orderNumber) => {
   uni.navigateTo({
-    url: '/pages/order-detail/order-detail?orderNum=' + orderNumber
+    url: '/pages/refund-apply/refund-apply?orderNum=' + orderNumber
   })
 }
 </script>
@@ -111,5 +126,10 @@ const toOrder = (orderNumber) => {
 }
 .reason {
   color: #999;
+}
+.link {
+  margin-top: 16rpx;
+  color: #eb2444;
+  font-size: 26rpx;
 }
 </style>
