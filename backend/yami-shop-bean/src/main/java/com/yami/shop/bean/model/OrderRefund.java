@@ -199,4 +199,16 @@ public class OrderRefund implements Serializable {
      */
     @TableField(exist = false)
     private List<OrderItem> orderItems;
+
+    /**
+     * 售后流程码（非表字段）：WAIT_AUDIT / WAIT_SHIP / WAIT_RECEIVE / REFUNDED / REJECTED
+     */
+    @TableField(exist = false)
+    private String flowCode;
+
+    /**
+     * 售后流程文案（非表字段）
+     */
+    @TableField(exist = false)
+    private String flowText;
 }

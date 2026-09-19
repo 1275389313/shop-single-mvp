@@ -67,8 +67,37 @@
 | 退款申请 | POST | `/p/refund/apply` | 用户端（订单详情/列表入口） |
 | 我的退款 | GET | `/p/refund/page` | 用户端 |
 | 订单退款 | GET | `/p/refund/byOrder?orderNumber=` | 用户端 |
+| 退货物流公司 | GET | `/p/refund/deliveryList` | 用户端（名称列表，不含查询 URL） |
+| 填写退货物流 | PUT | `/p/refund/express` | 用户端，`OrderRefundExpressParam` |
 | 退款列表 | GET | `/order/refund/page` | 管理端「退款审核」 |
 | 退款审核 | PUT | `/order/refund/audit` | 管理端同意=2 / 拒绝=3 |
+| 确认退货收货 | PUT | `/order/refund/receive` | 管理端，退货退款寄回后 mock 退款 |
+
+## 售后状态机（退款 / 退货退款）
+
+表字段 `tz_order_refund.refund_sts` 仍是审核结果：`1待审核 / 2同意 / 3拒绝`。退货等待态不另开列，由 `apply_type` + 物流字段 + `return_money_sts` 推导，接口返回 `flowCode` / `flowText`。
+
+| flowCode | 中文 | 条件 | 下一步 |
+| --- | --- | --- | --- |
+| `WAIT_AUDIT` | 待商家审核 | `refund_sts=1` | 管理端审核 |
+| `REJECTED` | 商家已拒绝 | `refund_sts=3` | 买家可再申请 |
+| `WAIT_SHIP` | 请寄回商品 | 退货退款已同意，尚未填 `express_no` | 买家 `PUT /p/refund/express` |
+| `WAIT_RECEIVE` | 待商家收货 | 已填单号，`return_money_sts≠1` | 管理端确认收货 |
+| `REFUNDED` | 退款成功 | `return_money_sts=1`（仅退款审核同意，或退货确认收货） | 结束（mock，无微信退款单号） |
+
+```text
+申请 applyType=1 仅退款
+  → 审核拒绝 → REJECTED
+  → 审核同意 → 立即 mock 退款 REFUNDED
+
+申请 applyType=2 退货退款
+  → 审核拒绝 → REJECTED
+  → 审核同意 → WAIT_SHIP（订单 refund_sts 仍为处理中）
+       → 买家填物流 → WAIT_RECEIVE
+            → 商家确认收货 → mock 退款 REFUNDED
+```
+
+真实微信退款未实现；`SHOP_MVP_MOCK_PAY=false` 时仍只改库并打日志 TODO。
 
 ## curl 示例（mock 支付回调）
 

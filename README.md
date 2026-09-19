@@ -34,11 +34,13 @@ Compose 只起 **MySQL + Redis**。首次启动会导入：
 1. `backend/db/yami_shop.sql`
 2. `backend/db/02-patch-phase1.sql`（`tz_user.wx_open_id` 等）
 3. `backend/db/03-patch-phase2.sql`（退款审核 / 店铺设置菜单）
+4. `backend/db/04-patch-phase3.sql`（确认退货收货权限）
 
 **已有数据卷不会自动跑新 SQL。** Phase 1 之后升级请再执行一次：
 
 ```bash
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/03-patch-phase2.sql
+docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/04-patch-phase3.sql
 ```
 
 没有 Docker 时，自行安装 MySQL/Redis，导入上述 SQL，账号默认 `root/root`，库名 `yami_shops`。
@@ -84,7 +86,7 @@ pnpm dev
 
 `admin/.env.development` 里 `VITE_APP_BASE_API=http://127.0.0.1:8085`。浏览器打开 Vite 提示的地址（本仓库默认 **http://localhost:9527**）。
 
-导入 `03-patch-phase2.sql` 后请**重新登录**管理端，菜单才会出现「订单管理 → 退款审核」「门店管理 → 店铺设置」。
+导入 `03-patch-phase2.sql` 后请**重新登录**管理端，菜单才会出现「订单管理 → 退款审核」「门店管理 → 店铺设置」。`04-patch-phase3.sql` 为退款审核增加「确认收货退款」权限；未导入时，拥有审核权限的账号仍可确认退货（接口兼容 `order:refund:audit`）。
 
 ## 4. uni-app / 微信小程序
 
@@ -146,11 +148,13 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    | 支付 | 自动调 mock 支付 | `POST /p/order/normalPay`（当场 `status=2`） |
    | 订单 | 订单列表 / 详情 | `/p/myOrder/**`；详情可 **确认收货** |
    | 退款申请 | 订单详情 / 列表「申请退款」 | `POST /p/refund/apply` |
+   | 退货物流 | 售后页「填写退货物流」 | `PUT /p/refund/express` |
    | 地址 | 我的 → 收货地址 | `/p/address/**` |
 
 6. 管理端（浏览器 `http://localhost:9527`，账号 `admin / 123456`，滑块验证码）：
    - **订单管理** 发货（待发货订单）
-   - **退款审核** 同意 / 拒绝（`PUT /order/refund/audit`）。同意只改库，**不会**打微信退款。
+   - **退款审核** 同意 / 拒绝（`PUT /order/refund/audit`）。仅退款同意=立刻 mock 退款；退货退款同意=等买家寄回。
+   - 买家填写物流后，**确认收货退款**（`PUT /order/refund/receive`）。只改库，**不会**打微信退款。
    - 可选：再调 `POST /notice/pay/mock` `{ "payNo": "..." }` 验证支付回调幂等。
 
 7. 常见失败：
@@ -169,9 +173,11 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 2. 加购 → 提交订单（`POST /p/order/submit`）→ 前端会调 `POST /p/order/normalPay`
 3. 订单变为待发货（status=2）。也可用 `POST /notice/pay/mock` 按 `payNo` 再回调一次，**幂等**
 4. 管理端发货 → 用户确认收货
-5. 用户申请退款 → 管理端「退款审核」同意或拒绝
+5. 用户申请退款：
+   - **仅退款**：管理端同意 → 立即 mock 退款成功
+   - **退货退款**：管理端同意 → 买家填写物流（`PUT /p/refund/express`）→ 管理端确认收货（`PUT /order/refund/receive`）→ mock 退款成功
 
-关闭 mock 后，真实 `code2session` / 微信预下单 **尚未实现**（会明确报错），见 README 末尾缺口。**不要**为了联调去配商户号。
+关闭 mock 后，真实 `code2session` / 微信预下单 **尚未实现**（会明确报错），见下方「Mock 与真实能力差距」。**不要**为了联调去配商户号。
 
 ## HTTPS
 
@@ -187,24 +193,35 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 - 订单列表/详情、取消未支付、确认收货、管理端发货
 - 未支付超时关单 + 回库存（Spring 定时，不依赖 xxl-job）
 - 支付回调幂等
-- 退款申请 UI（小程序订单详情/列表入口）+ 我的退款列表
-- 管理端退款审核（列表 + 同意/拒绝，mock 退款不打微信）
+- 退款/售后：申请（仅退款 / 退货退款）→ 审核 → 买家回填物流 → 商家确认收货并 mock 退款
 - 地址 CRUD、商品上下架、Banner、店铺设置页（单店）
-- 管理端操作日志（`@SysLog`，如发货、退款审核）
+- 管理端操作日志（`@SysLog`，如发货、退款审核、确认退货）
 
 明确未完成或薄弱：
 
 - **真实微信登录**（jscode2session）与 **真实微信支付/退款**（WxJava 在开源版基本被注释）；本阶段刻意保持 mock
-- 退货物流回填 `OrderRefundExpressParam` 仍未接到前端（申请类型可选「退货退款」，但不能填快递单号）
 - 确认收货后上游把状态写成 5（成功），待评价(4) 与评价闭环不完整
 - 对象存储目前是七牛钩子，**腾讯云 COS** 需自写；本地文件上传即可跑通
 - 管理端验证码依赖 anji captcha 缓存，环境不齐时可能影响登录（见上游文档）
 - 生产级 HTTPS、域名、小程序审核、支付商户号均未配置
-- 优惠券、秒杀、拼团、分销、完整物流轨迹：**非目标**（P1 或明确不做）
 - 我的页「分销中心 / 优惠券 / 消息 / 足迹」仍是上游未开源占位 toast
+
+### Mock 与真实能力差距
+
+本仓库默认 **mock 到底**，不要为了联调提交真实密钥。
+
+| 能力 | Mock（当前默认） | 真实接入（未做） |
+| --- | --- | --- |
+| 微信登录 | `SHOP_MVP_MOCK_WECHAT_LOGIN=true`，`code` 任意 | `jscode2session`，需 `WX_APP_ID` / `WX_APP_SECRET` |
+| 支付 | `SHOP_MVP_MOCK_PAY=true`，`normalPay` 当场已付 | 微信预下单 + 收银台 + HTTPS 回调验签 |
+| 退款 | 审核/确认收货只改库，`return_money_sts=1` | 微信退款 API + 退款回调；`out_refund_no` 仍为空 |
+| 物流轨迹 | 退货只存公司名+单号；正向物流仍走上游 `/delivery/check`（快递 100 占位 URL，无密钥） | 需快递 100 / 微信物流密钥，见配置占位，勿提交 |
+| 订阅消息 | 无 | 模板 id 配置钩子（P1 TODO） |
+
+**P1 后续（本轮不做，仅占位）：** 优惠券、物流轨迹（API + 假数据即可）、带图评价、库存预警、简单仪表盘、订阅消息配置钩子。
 
 ## 开发约定
 
-- 不要提交 `.env`、真实 AppSecret、商户密钥、证书
+- 不要提交 `.env`、真实 AppSecret、商户密钥、证书、快递查询密钥
 - 新增功能优先落在现有模块，不要拆微服务
 - 保持单店：不要恢复「创建第二个店铺」接口

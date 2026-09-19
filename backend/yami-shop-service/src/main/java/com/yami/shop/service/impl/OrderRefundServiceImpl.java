@@ -6,12 +6,16 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yami.shop.bean.app.param.OrderRefundAuditParam;
+import com.yami.shop.bean.app.param.OrderRefundExpressParam;
 import com.yami.shop.bean.app.param.OrderRefundParam;
+import com.yami.shop.bean.app.param.OrderRefundReceiveParam;
 import com.yami.shop.bean.enums.OrderStatus;
+import com.yami.shop.bean.enums.RefundFlow;
 import com.yami.shop.bean.model.Order;
 import com.yami.shop.bean.model.OrderItem;
 import com.yami.shop.bean.model.OrderRefund;
 import com.yami.shop.bean.model.OrderSettlement;
+import com.yami.shop.common.config.ShopMvpProperties;
 import com.yami.shop.common.exception.YamiShopBindException;
 import com.yami.shop.common.util.PageParam;
 import com.yami.shop.dao.OrderItemMapper;
@@ -32,19 +36,10 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class OrderRefundServiceImpl extends ServiceImpl<OrderRefundMapper, OrderRefund> implements OrderRefundService {
 
-    private static final int APPLY_TYPE_REFUND_ONLY = 1;
-    private static final int APPLY_TYPE_RETURN_GOODS = 2;
-    private static final int REFUND_STS_PENDING = 1;
-    private static final int REFUND_STS_AGREE = 2;
-    private static final int REFUND_STS_REJECT = 3;
-    private static final int RETURN_MONEY_PROCESSING = 0;
-    private static final int RETURN_MONEY_SUCCESS = 1;
-    private static final int ORDER_REFUND_PROCESSING = 1;
-    private static final int ORDER_REFUND_DONE = 2;
-
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
     private final OrderSettlementMapper orderSettlementMapper;
+    private final ShopMvpProperties shopMvpProperties;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -59,9 +54,15 @@ public class OrderRefundServiceImpl extends ServiceImpl<OrderRefundMapper, Order
         }
         long pending = count(new LambdaQueryWrapper<OrderRefund>()
                 .eq(OrderRefund::getOrderNumber, param.getOrderNumber())
-                .in(OrderRefund::getRefundSts, REFUND_STS_PENDING, REFUND_STS_AGREE));
+                .in(OrderRefund::getRefundSts, RefundFlow.STS_PENDING, RefundFlow.STS_AGREE));
         if (pending > 0) {
             throw new YamiShopBindException("该订单已有退款申请");
+        }
+
+        Integer applyType = param.getApplyType() == null ? RefundFlow.APPLY_TYPE_REFUND_ONLY : param.getApplyType();
+        if (!Objects.equals(applyType, RefundFlow.APPLY_TYPE_REFUND_ONLY)
+                && !Objects.equals(applyType, RefundFlow.APPLY_TYPE_RETURN_GOODS)) {
+            throw new YamiShopBindException("申请类型非法");
         }
 
         double refundAmount = order.getActualTotal() == null ? 0D : order.getActualTotal();
@@ -93,38 +94,28 @@ public class OrderRefundServiceImpl extends ServiceImpl<OrderRefundMapper, Order
         refund.setUserId(userId);
         refund.setGoodsNum(goodsNum);
         refund.setRefundAmount(refundAmount);
-        refund.setApplyType(param.getApplyType() == null ? APPLY_TYPE_REFUND_ONLY : param.getApplyType());
-        refund.setRefundSts(REFUND_STS_PENDING);
-        refund.setReturnMoneySts(RETURN_MONEY_PROCESSING);
+        refund.setApplyType(applyType);
+        refund.setRefundSts(RefundFlow.STS_PENDING);
+        refund.setReturnMoneySts(RefundFlow.MONEY_PROCESSING);
         refund.setApplyTime(now);
         refund.setPhotoFiles(param.getPhotoFiles());
         refund.setBuyerMsg(param.getBuyerMsg());
         save(refund);
 
-        Order patch = new Order();
-        patch.setOrderId(order.getOrderId());
-        patch.setRefundSts(ORDER_REFUND_PROCESSING);
-        orderMapper.updateById(patch);
-
+        patchOrderRefundSts(order.getOrderId(), RefundFlow.ORDER_REFUND_PROCESSING);
+        RefundFlow.fill(refund);
         log.info("refund applied orderNumber={} refundSn={} applyType={}", order.getOrderNumber(), refund.getRefundSn(), refund.getApplyType());
-        if (Objects.equals(refund.getApplyType(), APPLY_TYPE_RETURN_GOODS)) {
-            // TODO: buyer return-goods logistics (OrderRefundExpressParam) is not wired in uni-app yet
-            log.warn("TODO refund return-goods: uni-app has no express submit UI, API param exists: OrderRefundExpressParam");
-        }
         return refund;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderRefund audit(Long shopId, OrderRefundAuditParam param) {
-        OrderRefund refund = getById(param.getRefundId());
-        if (refund == null || !Objects.equals(refund.getShopId(), shopId)) {
-            throw new YamiShopBindException("退款单不存在");
-        }
-        if (!Objects.equals(refund.getRefundSts(), REFUND_STS_PENDING)) {
+        OrderRefund refund = getOwnedRefund(shopId, param.getRefundId());
+        if (!Objects.equals(refund.getRefundSts(), RefundFlow.STS_PENDING)) {
             throw new YamiShopBindException("退款单已审核");
         }
-        if (!Objects.equals(param.getRefundSts(), REFUND_STS_AGREE) && !Objects.equals(param.getRefundSts(), REFUND_STS_REJECT)) {
+        if (!Objects.equals(param.getRefundSts(), RefundFlow.STS_AGREE) && !Objects.equals(param.getRefundSts(), RefundFlow.STS_REJECT)) {
             throw new YamiShopBindException("审核结果非法");
         }
 
@@ -132,47 +123,132 @@ public class OrderRefundServiceImpl extends ServiceImpl<OrderRefundMapper, Order
         refund.setRefundSts(param.getRefundSts());
         refund.setSellerMsg(param.getSellerMsg());
         refund.setHandelTime(now);
-        if (Objects.equals(param.getRefundSts(), REFUND_STS_REJECT)) {
+        if (Objects.equals(param.getRefundSts(), RefundFlow.STS_REJECT)) {
             refund.setRejectMessage(param.getSellerMsg());
-            refund.setReturnMoneySts(-1);
+            refund.setReturnMoneySts(RefundFlow.MONEY_FAIL);
+            updateById(refund);
+            patchOrderRefundSts(refund.getOrderId(), 0);
+        } else if (Objects.equals(refund.getApplyType(), RefundFlow.APPLY_TYPE_RETURN_GOODS)) {
+            refund.setReturnMoneySts(RefundFlow.MONEY_PROCESSING);
+            updateById(refund);
+            // keep order refund processing until merchant confirms returned goods
+            log.info("return-goods approved, waiting buyer ship refundSn={}", refund.getRefundSn());
         } else {
-            refund.setReturnMoneySts(RETURN_MONEY_SUCCESS);
-            refund.setRefundTime(now);
-            // TODO: call WeChat refund API when shop-mvp.mock.pay=false
-            log.info("mock refund approved refundSn={} amount={} (no WeChat refund API in open-source mall4j)",
-                    refund.getRefundSn(), refund.getRefundAmount());
+            completeMockRefund(refund, now);
+            updateById(refund);
+            patchOrderRefundSts(refund.getOrderId(), RefundFlow.ORDER_REFUND_DONE);
+        }
+        RefundFlow.fill(refund);
+        return refund;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderRefund submitExpress(String userId, OrderRefundExpressParam param) {
+        OrderRefund refund = getOne(new LambdaQueryWrapper<OrderRefund>()
+                .eq(OrderRefund::getRefundSn, param.getRefundSn())
+                .eq(OrderRefund::getUserId, userId)
+                .last("limit 1"));
+        if (refund == null) {
+            throw new YamiShopBindException("退款单不存在");
+        }
+        if (!RefundFlow.canEditReturnExpress(refund)) {
+            throw new YamiShopBindException("当前状态不可填写退货物流");
+        }
+        Date now = new Date();
+        refund.setExpressName(param.getExpressName().trim());
+        refund.setExpressNo(param.getExpressNo().trim());
+        if (refund.getShipTime() == null) {
+            refund.setShipTime(now);
         }
         updateById(refund);
+        RefundFlow.fill(refund);
+        log.info("return-goods express submitted refundSn={} expressNo={}", refund.getRefundSn(), refund.getExpressNo());
+        return refund;
+    }
 
-        Order patch = new Order();
-        patch.setOrderId(refund.getOrderId());
-        patch.setRefundSts(Objects.equals(param.getRefundSts(), REFUND_STS_AGREE) ? ORDER_REFUND_DONE : 0);
-        orderMapper.updateById(patch);
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderRefund confirmReceive(Long shopId, OrderRefundReceiveParam param) {
+        OrderRefund refund = getOwnedRefund(shopId, param.getRefundId());
+        if (!RefundFlow.waitingMerchantReceive(refund)) {
+            throw new YamiShopBindException("买家尚未寄回或已完成退款");
+        }
+        Date now = new Date();
+        refund.setReceiveTime(now);
+        refund.setReceiveMessage(param.getReceiveMessage());
+        completeMockRefund(refund, now);
+        updateById(refund);
+        patchOrderRefundSts(refund.getOrderId(), RefundFlow.ORDER_REFUND_DONE);
+        RefundFlow.fill(refund);
+        return refund;
+    }
+
+    @Override
+    public OrderRefund getShopRefund(Long shopId, Long refundId) {
+        OrderRefund refund = getOwnedRefund(shopId, refundId);
+        RefundFlow.fill(refund);
         return refund;
     }
 
     @Override
     public IPage<OrderRefund> pageByShop(Long shopId, Integer refundSts, String orderNumber, PageParam<OrderRefund> page) {
-        return page(page, new LambdaQueryWrapper<OrderRefund>()
+        IPage<OrderRefund> result = page(page, new LambdaQueryWrapper<OrderRefund>()
                 .eq(OrderRefund::getShopId, shopId)
                 .eq(refundSts != null, OrderRefund::getRefundSts, refundSts)
                 .like(StrUtil.isNotBlank(orderNumber), OrderRefund::getOrderNumber, orderNumber)
                 .orderByDesc(OrderRefund::getApplyTime));
+        result.getRecords().forEach(RefundFlow::fill);
+        return result;
     }
 
     @Override
     public IPage<OrderRefund> pageByUser(String userId, PageParam<OrderRefund> page) {
-        return page(page, new LambdaQueryWrapper<OrderRefund>()
+        IPage<OrderRefund> result = page(page, new LambdaQueryWrapper<OrderRefund>()
                 .eq(OrderRefund::getUserId, userId)
                 .orderByDesc(OrderRefund::getApplyTime));
+        result.getRecords().forEach(RefundFlow::fill);
+        return result;
     }
 
     @Override
     public OrderRefund getByOrderNumber(String userId, String orderNumber) {
-        return getOne(new LambdaQueryWrapper<OrderRefund>()
+        OrderRefund refund = getOne(new LambdaQueryWrapper<OrderRefund>()
                 .eq(OrderRefund::getUserId, userId)
                 .eq(OrderRefund::getOrderNumber, orderNumber)
                 .orderByDesc(OrderRefund::getApplyTime)
                 .last("limit 1"));
+        RefundFlow.fill(refund);
+        return refund;
+    }
+
+    private OrderRefund getOwnedRefund(Long shopId, Long refundId) {
+        OrderRefund refund = getById(refundId);
+        if (refund == null || !Objects.equals(refund.getShopId(), shopId)) {
+            throw new YamiShopBindException("退款单不存在");
+        }
+        return refund;
+    }
+
+    private void patchOrderRefundSts(Long orderId, Integer refundSts) {
+        Order patch = new Order();
+        patch.setOrderId(orderId);
+        patch.setRefundSts(refundSts);
+        orderMapper.updateById(patch);
+    }
+
+    /**
+     * Marks money success in DB. Does not call WeChat refund (open-source mall4j has no live WxPay refund).
+     */
+    private void completeMockRefund(OrderRefund refund, Date now) {
+        refund.setReturnMoneySts(RefundFlow.MONEY_SUCCESS);
+        refund.setRefundTime(now);
+        if (shopMvpProperties.getMock().isPay()) {
+            log.info("mock refund completed refundSn={} amount={} (no WeChat refund API)",
+                    refund.getRefundSn(), refund.getRefundAmount());
+        } else {
+            log.warn("TODO WeChat refund API not implemented; DB marked success refundSn={} amount={}",
+                    refund.getRefundSn(), refund.getRefundAmount());
+        }
     }
 }

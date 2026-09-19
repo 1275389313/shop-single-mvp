@@ -85,7 +85,7 @@
     {
       "path": "pages/refund-apply/refund-apply",
       "style": {
-        "navigationBarTitleText": "申请退款",
+        "navigationBarTitleText": "退款售后",
         "navigationBarBackgroundColor": "#fff"
       }
     },

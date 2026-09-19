@@ -10,7 +10,7 @@ export const tableOption = {
   addBtn: false,
   editBtn: false,
   delBtn: false,
-  menuWidth: 180,
+  menuWidth: 260,
   column: [
     {
       label: '退款编号',
@@ -37,6 +37,10 @@ export const tableOption = {
       ]
     },
     {
+      label: '售后进度',
+      prop: 'flowText'
+    },
+    {
       label: '审核状态',
       prop: 'refundSts',
       search: true,
@@ -56,6 +60,16 @@ export const tableOption = {
         { label: '成功', value: 1 },
         { label: '失败', value: -1 }
       ]
+    },
+    {
+      label: '物流公司',
+      prop: 'expressName',
+      overHidden: true
+    },
+    {
+      label: '退货单号',
+      prop: 'expressNo',
+      overHidden: true
     },
     {
       label: '申请原因',
