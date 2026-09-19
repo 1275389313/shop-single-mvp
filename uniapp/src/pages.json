@@ -173,6 +173,20 @@
       "style": {
         "navigationBarTitleText": "用户注册"
       }
+    },
+    {
+      "path": "pages/coupon-center/coupon-center",
+      "style": {
+        "navigationBarTitleText": "领券中心",
+        "onReachBottomDistance": 50
+      }
+    },
+    {
+      "path": "pages/my-coupon/my-coupon",
+      "style": {
+        "navigationBarTitleText": "我的优惠券",
+        "onReachBottomDistance": 50
+      }
     }
   ],
   "tabBar": {

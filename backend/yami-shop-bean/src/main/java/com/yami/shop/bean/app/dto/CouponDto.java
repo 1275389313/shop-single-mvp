@@ -1,13 +1,3 @@
-/*
- * Copyright (c) 2018-2999 广州市蓝海创新科技有限公司 All rights reserved.
- *
- * https://www.mall4j.com/
- *
- * 未经允许，不可做商业用途！
- *
- * 版权所有，侵权必究！
- */
-
 package com.yami.shop.bean.app.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -19,18 +9,18 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 结算页优惠券。couponId 为用户券 ID（coupon_user_id），与 OrderParam.couponIds 对齐。
+ * 领券中心 / 我的优惠券。
  */
 @Data
-public class CouponOrderDto implements Serializable {
+public class CouponDto implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "用户优惠券ID，提交订单时回传 couponIds")
+    @Schema(description = "优惠券模板ID")
     private Long couponId;
 
-    @Schema(description = "优惠券模板ID")
-    private Long couponTemplateId;
+    @Schema(description = "用户优惠券ID，我的优惠券才有")
+    private Long couponUserId;
 
     private String couponName;
 
@@ -45,17 +35,27 @@ public class CouponOrderDto implements Serializable {
 
     private Double couponDiscount;
 
-    @Schema(description = "本单可减免金额")
-    private Double couponReduce;
+    private Double maxReduceAmount;
 
-    private Boolean canUse;
+    private Integer stocks;
 
-    @Schema(description = "是否选中")
-    private Boolean choose;
+    private Integer limitNum;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date startTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date endTime;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date userStartTime;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date userEndTime;
+
+    @Schema(description = "0未使用 1已使用 2已过期")
+    private Integer status;
+
+    @Schema(description = "是否还能领取（领券中心）")
+    private Boolean canReceive;
 }
