@@ -38,6 +38,7 @@ Compose 只起 **MySQL + Redis**。首次启动会导入：
 5. `backend/db/05-patch-coupon.sql`（优惠券表 + 菜单 + 演示满减/折扣券）
 6. `backend/db/06-patch-stock-alert.sql`（SKU `stocks_arm` + 全局阈值配置 + 库存预警菜单）
 7. `backend/db/07-patch-dashboard.sql`（数据看板菜单）
+8. `backend/db/08-patch-subscribe-message.sql`（订阅消息模板 ID 占位，值为空）
 
 **已有数据卷不会自动跑新 SQL。** 升级请再执行：
 
@@ -47,6 +48,7 @@ docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/05-patch-coupon.sql
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/06-patch-stock-alert.sql
 docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/07-patch-dashboard.sql
+docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 yami_shops < backend/db/08-patch-subscribe-message.sql
 ```
 
 没有 Docker 时，自行安装 MySQL/Redis，导入上述 SQL，账号默认 `root/root`，库名 `yami_shops`。
@@ -73,7 +75,8 @@ mvn -pl yami-shop-admin -DskipTests spring-boot:run
 | `SHOP_MVP_MOCK_PAY` | true | mock 支付（下单后直接已付） |
 | `SHOP_MVP_ORDER_AUTO_CLOSE` | true | 未支付超时关单 + 回库存 |
 | `SHOP_MVP_ORDER_AUTO_CLOSE_MINUTES` | 30 | 超时分钟 |
-| `WX_APP_ID` / `WX_APP_SECRET` | 空 | 真实小程序（mock 关闭后才需要） |
+| `WX_APP_ID` / `WX_APP_SECRET` | 空 | 真实小程序（mock 关闭后才需要）；订阅消息真发时也要 |
+| `WX_SUBSCRIBE_PAY_TEMPLATE_ID` / `WX_SUBSCRIBE_SHIP_TEMPLATE_ID` | 空 | 订阅消息模板 ID（不是密钥）；空则支付/发货钩子 no-op |
 | `WX_PAY_MCH_ID` / `WX_PAY_API_KEY` / `WX_PAY_NOTIFY_URL` | 空 | 真实支付；回调 URL 必须 **HTTPS** |
 | `KUAIDI100_CUSTOMER` / `KUAIDI100_KEY` | 空 | 快递100即时查询；都空则返回 **模拟轨迹** |
 
@@ -111,6 +114,7 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
 | 小程序 AppID | `uniapp/src/manifest.json` → `mp-weixin.appid`（可空，用测试号） |
 | H5 公众号 AppID | `VITE_APP_MP_APPID`（可空） |
 | 模拟微信登录按钮 | `VITE_APP_MOCK_WX=true`（登录页） |
+| 订阅消息模板 ID | `VITE_APP_WX_TMPL_PAY` / `VITE_APP_WX_TMPL_SHIP`（可空；也可由 `GET /wx/subscribe/config` 下发） |
 
 **不要把真实支付商户密钥写进前端。**
 
@@ -216,6 +220,7 @@ H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.
 - 优惠券：管理端满减/折扣、投放与库存；买家领取、结算选择、下单核销；未支付取消退券
 - 库存预警：全局阈值（`tz_sys_config`）+ 可选 SKU 阈值（`tz_sku.stocks_arm`）；管理端列表与首页/商品列表角标
 - 数据看板：管理端首页卡片 +「订单管理 → 数据看板」；今日/近7日/近30日/累计 GMV、已付/待付/关闭、退款成功与处理中
+- 订阅消息：支付成功 / 发货通知的模板 ID 占位与钩子；未配置时只打日志，不挡 mock 支付/发货
 
 明确未完成或薄弱：
 
@@ -226,7 +231,7 @@ H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.
 - 我的页「分销中心 / 消息 / 足迹」仍是上游未开源占位 toast
 - 优惠券 P1 仅全店通用、一单一券；指定商品/品类券、叠加券未做
 - 数据看板：自然日按上海时区；GMV 按 **支付时间**，样例 SQL 订单多在 2019 年所以今日/近7日/近30日经常为 0（看累计或新 mock 单）；不是财务对账、不含优惠拆分、不接微信账单
-- 物流：微信物流助手 / 订阅消息未接；真实快递100对顺丰等常要手机号，退货寄件人手机未单独存（目前复用订单收货人手机）；未知公司名可能解析不出 `com` 编码；mock 轨迹按发货/寄回时间推演，不是承运商数据
+- 物流：微信物流助手未接；真实快递100对顺丰等常要手机号，退货寄件人手机未单独存（目前复用订单收货人手机）；未知公司名可能解析不出 `com` 编码；mock 轨迹按发货/寄回时间推演，不是承运商数据
 
 ### Mock 与真实能力差距
 
@@ -239,9 +244,7 @@ H5 联调：`pnpm dev:h5`（默认 **http://localhost:5173**）。H5 没有 `wx.
 | 退款 | 审核/确认收货只改库，`return_money_sts=1` | 微信退款 API + 退款回调；`out_refund_no` 仍为空 |
 | 物流轨迹 | 无 `KUAIDI100_CUSTOMER`/`KEY` 时按发货/寄回时间生成模拟时间轴（会标明 mock） | 填快递100 customer+key 后走即时查询；微信物流助手未做 |
 | 评价晒图 | 本地上传 + 可选占位图，评价立刻上架 | 七牛/COS 真实 CDN；人工审核流可把默认 status 改回 0 |
-| 订阅消息 | 无 | 模板 id 配置钩子（P1 TODO） |
-
-**P1 后续（本轮不做，仅占位）：** 订阅消息配置钩子。
+| 订阅消息 | 模板 ID 空 → 支付/发货钩子 log skip，uni-app 不弹授权 | 填模板 ID + 真实 AppId/AppSecret + 用户曾点允许；字段名须与微信模板一致 |
 
 ## 优惠券怎么用（P1）
 
@@ -306,7 +309,7 @@ uni-app：订单列表/详情「查看物流」；售后详情/列表在已填�
 3. 列表或商品发布页的 SKU「预警阈值」：留空跟随全局；填数字覆盖；`-1` 该规格不预警。
 4. 管理端首页和商品列表有低库存数量角标（只计**上架**商品的 SKU）。商品列表「低库存」标签按 SPU `total_stocks` 对比全局阈值，精确名单以预警页 SKU 为准。
 
-不发短信、不订阅消息。mock 支付与库存扣减逻辑未改。
+不发短信。mock 支付与库存扣减逻辑未改。
 
 | 端 | 方法 | 路径 | 说明 |
 | --- | --- | --- | --- |
@@ -332,6 +335,33 @@ uni-app：订单列表/详情「查看物流」；售后详情/列表在已填�
 | 端 | 方法 | 路径 | 说明 |
 | --- | --- | --- | --- |
 | 管理端 | GET | `/order/dashboard` | 权限 `order:dashboard:info` |
+
+## 订阅消息怎么用（P1）
+
+开源 mall4j 只有短信枚举（`SmsType`），**没有**小程序订阅消息发送。本仓库加了配置占位和钩子，**默认不发、不需要 AppSecret**。mock 支付保持不变。
+
+1. 导入 `backend/db/08-patch-subscribe-message.sql`（已有库手动执行）。管理端「系统管理 → 参数管理」会出现两条空配置：
+   - `WX_SUBSCRIBE_PAY_TEMPLATE_ID` 支付成功
+   - `WX_SUBSCRIBE_SHIP_TEMPLATE_ID` 发货通知
+2. 本地联调：两条都留空。支付成功、管理端发货会打 `skip subscribe ... reason=templateId unset`，**不会抛错、不会回滚订单**。
+3. 以后要真发：
+   1. 微信公众平台 → 功能 → 订阅消息，选用类目模板「支付成功」「发货通知」，记下模板 ID。
+   2. 把 ID 填进参数管理，**或** `.env` 的 `WX_SUBSCRIBE_PAY_TEMPLATE_ID` / `WX_SUBSCRIBE_SHIP_TEMPLATE_ID`（sys_config 非空时优先）。
+   3. 填 `WX_APP_ID` / `WX_APP_SECRET`（**不要提交 git**）。mock 登录的 `openId` 以 `mock_` 开头，真发会被跳过。
+   4. 小程序端：`uniapp/.env.*` 的 `VITE_APP_WX_TMPL_PAY` / `VITE_APP_WX_TMPL_SHIP` 可填同样 ID，或依赖 `GET /wx/subscribe/config`。结算/待支付点击支付时会调 `wx.requestSubscribeMessage`。H5 自动跳过。
+   5. 模板关键词默认按下面映射；不一致时微信返回 47003，只打日志。可改 `SubscribeMessageRules.payData` / `shipData`。
+
+| 场景 | 默认字段 |
+| --- | --- |
+| 支付成功 | `character_string1` 订单号，`amount2` 金额，`thing3` 商品名，`time4` 支付时间，`thing5`「支付成功」 |
+| 发货通知 | `character_string1` 订单号，`thing2` 快递公司，`character_string3` 运单号，`thing4` 商品名，`time5` 发货时间 |
+
+点击消息跳转 `pages/order-detail/order-detail?orderNum=`。`miniprogram_state` 默认 `developer`（`WX_SUBSCRIBE_MINIPROGRAM_STATE`）。
+
+| 端 | 方法 | 路径 | 说明 |
+| --- | --- | --- | --- |
+| 买家 | GET | `/wx/subscribe/config` | 模板 ID，无密钥，无需登录 |
+| 钩子 | 内部 | `PaySuccessOrderEvent` / `DeliveryOrderEvent` | 支付成功、管理端发货后 |
 
 ## 开发约定
 

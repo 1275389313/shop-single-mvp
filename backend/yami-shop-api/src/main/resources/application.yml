@@ -56,6 +56,9 @@ shop-mvp:
     pay-mch-id: ${WX_PAY_MCH_ID:}
     pay-api-key: ${WX_PAY_API_KEY:}
     pay-notify-url: ${WX_PAY_NOTIFY_URL:}
+    subscribe-pay-template-id: ${WX_SUBSCRIBE_PAY_TEMPLATE_ID:}
+    subscribe-ship-template-id: ${WX_SUBSCRIBE_SHIP_TEMPLATE_ID:}
+    subscribe-miniprogram-state: ${WX_SUBSCRIBE_MINIPROGRAM_STATE:developer}
   kuaidi100:
     customer: ${KUAIDI100_CUSTOMER:}
     key: ${KUAIDI100_KEY:}

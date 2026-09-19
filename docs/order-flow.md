@@ -34,6 +34,7 @@
      |                                      |  settlement.pay_status=1         |
      |                                      |  order.status=2 is_payed=1       |
      |                                      |  发布 PaySuccessOrderEvent       |
+     |                                      |  订阅消息钩子：无模板 ID 则 skip |
      |                                      |                                  |
      |  (可选) POST /notice/pay/mock        |                                  |
      |  {payNo}  无需登录，幂等              |                                  |
@@ -44,6 +45,8 @@
      |  PUT /order/order/delivery           |
      |  {orderNumber, dvyId, dvyFlowId}     |
      | ---------------------------------->  |  status=3，写入物流单号           |
+     |                                      |  发布 DeliveryOrderEvent         |
+     |                                      |  订阅消息钩子：无模板 ID 则 skip |
 
 用户端
      |  PUT /p/myOrder/receipt/{orderNumber}
@@ -68,6 +71,7 @@
 | 我的券 | GET | `/p/coupon/myList` | `status` 0未使用 1已用 2过期 |
 | 优惠券管理 | | `/coupon/coupon/**` | 管理端 8085 |
 | 支付 | POST | `/p/order/pay` 或 `/p/order/normalPay` | mock 时当场已付 |
+| 订阅模板 | GET | `/wx/subscribe/config` | 可空模板 ID，无密钥 |
 | 回调 | POST | `/notice/pay/mock` | `{ "payNo": "..." }` 幂等 |
 | 发货 | PUT | `/order/order/delivery` | 管理端 |
 | 确认收货 | PUT | `/p/myOrder/receipt/{orderNumber}` | 用户端，status=4 待评价 |

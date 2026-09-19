@@ -333,6 +333,7 @@
 
 <script setup>
 import { refundFlowText, canEditReturnExpress } from '@/utils/refund.js'
+import { prefetchSubscribeTmplIds, requestOrderSubscribe } from '@/utils/subscribe-message.js'
 
 const wxs = number()
 
@@ -344,6 +345,7 @@ onLoad((options) => {
 })
 
 onShow(() => {
+  prefetchSubscribeTmplIds()
   if (orderNumber.value) {
     loadOrderDetail(orderNumber.value)
   }
@@ -490,25 +492,27 @@ const onCancelOrder = () => {
 }
 
 const normalPay = () => {
-  uni.showLoading({ mask: true })
-  http.request({
-    url: '/p/order/normalPay',
-    method: 'POST',
-    data: {
-      orderNumbers: orderNumber.value,
-      payType: 1
-    }
-  }).then(({ data }) => {
-    uni.hideLoading()
-    if (data && (data.paid === undefined || data.paid)) {
-      uni.navigateTo({
-        url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + orderNumber.value
-      })
-    } else {
-      uni.showToast({ title: '支付失败！', icon: 'none' })
-    }
-  }).catch(() => {
-    uni.hideLoading()
+  requestOrderSubscribe().then(() => {
+    uni.showLoading({ mask: true })
+    http.request({
+      url: '/p/order/normalPay',
+      method: 'POST',
+      data: {
+        orderNumbers: orderNumber.value,
+        payType: 1
+      }
+    }).then(({ data }) => {
+      uni.hideLoading()
+      if (data && (data.paid === undefined || data.paid)) {
+        uni.navigateTo({
+          url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + orderNumber.value
+        })
+      } else {
+        uni.showToast({ title: '支付失败！', icon: 'none' })
+      }
+    }).catch(() => {
+      uni.hideLoading()
+    })
   })
 }
 

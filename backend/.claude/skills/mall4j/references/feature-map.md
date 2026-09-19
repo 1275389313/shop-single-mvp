@@ -96,7 +96,7 @@ C 端：小程序 `front-end/mall4m/pages/`，uni-app `front-end/mall4uni/src/pa
 | 表 | `tz_order_settlement`（`payNo`、`pay_amount`） |
 | 文档 | `doc/6-核心业务/6-支付流程.md` |
 
-当前实现会直接 `paySuccess()` 并发布 `PaySuccessOrderEvent`。这是本地跑通，不是生产三方支付。
+当前实现会直接 `paySuccess()` 并发布 `PaySuccessOrderEvent`。这是本地跑通，不是生产三方支付。支付成功后 `SubscribeMessageListener` 尝试发「支付成功」订阅消息；模板 ID / AppSecret 为空则 log skip。
 
 ## 订单与发货
 
@@ -105,6 +105,7 @@ C 端：小程序 `front-end/mall4m/pages/`，uni-app `front-end/mall4uni/src/pa
 | 我的订单 / 详情 / 用户侧操作 | `MyOrderController` | `orderList`、`order-detail` |
 | 后台订单查询 / 详情 / 发货 / 导出 | 管理端 `OrderController` | `order/order` |
 | 数据看板 GMV/订单/退款 | 管理端 `DashboardController` | `order/dashboard` |
+| 订阅消息（支付成功/发货） | `SubscribeMessageService`，用户端 `GET /wx/subscribe/config` | 结算/支付页 `requestSubscribeMessage` |
 | 物流查询 | 管理端/用户端 `DeliveryController` | `express-delivery` |
 | 超时取消、自动确认收货 | `yami-shop-admin/.../task/OrderTask.java` | — |
 | 状态枚举 | `yami-shop-bean/.../enums/OrderStatus.java` | — |

@@ -237,6 +237,7 @@
 </template>
 
 <script setup>
+import { prefetchSubscribeTmplIds, requestOrderSubscribe } from '@/utils/subscribe-message.js'
 const wxs = number()
 
 const sts = ref(0)
@@ -254,6 +255,7 @@ onLoad((options) => {
 })
 
 onShow(() => {
+  prefetchSubscribeTmplIds()
   if (!firstLoad.value) {
     loadOrderData(sts.value, 1)
   }
@@ -355,36 +357,39 @@ const onCancelOrder = (e) => {
  * @param e
  */
 const normalPay = (e) => {
-  uni.showLoading({
-    mask: true
-  })
-  http.request({
-    url: '/p/order/normalPay',
-    method: 'POST',
-    data: {
-      orderNumbers: e.currentTarget.dataset.ordernum,
-      payType: 1
-    }
-  })
-    .then(({ data }) => {
-      uni.hideLoading()
-      if (data && (data.paid === undefined || data.paid)) {
-        uni.showToast({
-          title: '模拟支付成功',
-          icon: 'none'
-        })
-        setTimeout(() => {
-          uni.navigateTo({
-            url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + e.currentTarget.dataset.ordernum
-          })
-        }, 1200)
-      } else {
-        uni.showToast({
-          title: '支付失败！',
-          icon: 'none'
-        })
+  const orderNumbers = e.currentTarget.dataset.ordernum
+  requestOrderSubscribe().then(() => {
+    uni.showLoading({
+      mask: true
+    })
+    http.request({
+      url: '/p/order/normalPay',
+      method: 'POST',
+      data: {
+        orderNumbers,
+        payType: 1
       }
     })
+      .then(({ data }) => {
+        uni.hideLoading()
+        if (data && (data.paid === undefined || data.paid)) {
+          uni.showToast({
+            title: '模拟支付成功',
+            icon: 'none'
+          })
+          setTimeout(() => {
+            uni.navigateTo({
+              url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + orderNumbers
+            })
+          }, 1200)
+        } else {
+          uni.showToast({
+            title: '支付失败！',
+            icon: 'none'
+          })
+        }
+      })
+  })
 }
 
 /**

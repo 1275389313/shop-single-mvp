@@ -1,5 +1,7 @@
 <script setup>
+import { prefetchSubscribeTmplIds } from '@/utils/subscribe-message.js'
 http.getCartCount()
+prefetchSubscribeTmplIds()
 </script>
 
 <style lang="scss" scoped>
