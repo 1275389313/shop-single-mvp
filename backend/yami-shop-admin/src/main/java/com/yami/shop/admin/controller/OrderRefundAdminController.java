@@ -10,6 +10,7 @@ import com.yami.shop.security.admin.util.SecurityUtils;
 import com.yami.shop.service.OrderRefundService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Admin refund audit. Uni-app / mall4v UI for this screen is still a P0 gap.
+ * Admin refund audit. Wired to mall4v 退款审核 page.
  */
 @RestController
 @RequestMapping("/order/refund")
@@ -28,19 +29,22 @@ public class OrderRefundAdminController {
     private final OrderRefundService orderRefundService;
 
     @GetMapping("/page")
-    public ServerResponseEntity<IPage<OrderRefund>> page(Integer refundSts, PageParam<OrderRefund> page) {
+    @PreAuthorize("@pms.hasPermission('order:refund:page')")
+    public ServerResponseEntity<IPage<OrderRefund>> page(Integer refundSts, String orderNumber, PageParam<OrderRefund> page) {
         Long shopId = SecurityUtils.getSysUser().getShopId();
-        return ServerResponseEntity.success(orderRefundService.pageByShop(shopId, refundSts, page));
+        return ServerResponseEntity.success(orderRefundService.pageByShop(shopId, refundSts, orderNumber, page));
     }
 
     @PutMapping("/audit")
     @SysLog("退款审核")
+    @PreAuthorize("@pms.hasPermission('order:refund:audit')")
     public ServerResponseEntity<OrderRefund> audit(@Valid @RequestBody OrderRefundAuditParam param) {
         Long shopId = SecurityUtils.getSysUser().getShopId();
         return ServerResponseEntity.success(orderRefundService.audit(shopId, param));
     }
 
     @GetMapping("/info")
+    @PreAuthorize("@pms.hasPermission('order:refund:info')")
     public ServerResponseEntity<OrderRefund> info(@RequestParam Long refundId) {
         return ServerResponseEntity.success(orderRefundService.getById(refundId));
     }

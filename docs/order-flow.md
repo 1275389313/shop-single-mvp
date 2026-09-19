@@ -64,8 +64,11 @@
 | 回调 | POST | `/notice/pay/mock` | `{ "payNo": "..." }` 幂等 |
 | 发货 | PUT | `/order/order/delivery` | 管理端 |
 | 确认收货 | PUT | `/p/myOrder/receipt/{orderNumber}` | 用户端 |
-| 退款申请 | POST | `/p/refund/apply` | 用户端 |
-| 退款审核 | PUT | `/order/refund/audit` | 管理端 |
+| 退款申请 | POST | `/p/refund/apply` | 用户端（订单详情/列表入口） |
+| 我的退款 | GET | `/p/refund/page` | 用户端 |
+| 订单退款 | GET | `/p/refund/byOrder?orderNumber=` | 用户端 |
+| 退款列表 | GET | `/order/refund/page` | 管理端「退款审核」 |
+| 退款审核 | PUT | `/order/refund/audit` | 管理端同意=2 / 拒绝=3 |
 
 ## curl 示例（mock 支付回调）
 

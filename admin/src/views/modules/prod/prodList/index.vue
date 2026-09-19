@@ -13,7 +13,7 @@
     >
       <template #menu-left>
         <el-button
-          v-if="isAuth('shop:pickAddr:save')"
+          v-if="isAuth('prod:prod:save')"
           type="primary"
           icon="el-icon-plus"
           @click.stop="onAddOrUpdate()"
@@ -22,7 +22,7 @@
         </el-button>
 
         <el-button
-          v-if="isAuth('shop:pickAddr:delete')"
+          v-if="isAuth('prod:prod:delete')"
           type="danger"
           :disabled="dataListSelections.length <= 0"
           @click="onDelete()"

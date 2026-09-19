@@ -14,9 +14,7 @@
           </text>
         </view>
         <view class="addr">
-          {{ userAddrDto.province }}{{ userAddrDto.city }}{{ userAddrDto.area }}{{
-            userAddrDto.area
-          }}{{ userAddrDto.addr }}
+          {{ userAddrDto.province }}{{ userAddrDto.city }}{{ userAddrDto.area }}{{ userAddrDto.addr }}
         </view>
       </view>
 
@@ -186,9 +184,25 @@
         </view>
       </view>
 
+      <view
+        v-if="refund"
+        class="order-msg"
+      >
+        <view class="msg-item">
+          <view class="item">
+            <text class="item-tit">
+              退款状态：
+            </text>
+            <text class="item-txt">
+              {{ refund.refundSts === 1 ? '待商家审核' : (refund.refundSts === 2 ? '商家已同意' : '商家已拒绝') }}
+            </text>
+          </view>
+        </view>
+      </view>
+
       <!-- 底部栏 -->
       <view
-        v-if="status==5||status==6"
+        v-if="status==1 || status==2 || status==3 || status==5 || status==6"
         class="order-detail-footer"
       >
         <text
@@ -198,6 +212,36 @@
         >
           删除订单
         </text>
+        <view class="footer-box">
+          <text
+            v-if="status==1"
+            class="apply-service"
+            @tap="onCancelOrder"
+          >
+            取消订单
+          </text>
+          <text
+            v-if="status==1"
+            class="buy-again"
+            @tap="normalPay"
+          >
+            付款
+          </text>
+          <text
+            v-if="canRefund"
+            class="apply-service"
+            @tap="toRefundApply"
+          >
+            申请退款
+          </text>
+          <text
+            v-if="status==3"
+            class="buy-again"
+            @tap="onConfirmReceive"
+          >
+            确认收货
+          </text>
+        </view>
       </view>
     </view>
   </view>
@@ -234,6 +278,11 @@ const userAddrDto = ref(null)
 const orderNumber = ref('')
 const createTime = ref('')
 const total = ref(0) // 商品总额
+const refund = ref(null)
+const canRefund = computed(() => {
+  const sts = Number(status.value)
+  return (sts === 2 || sts === 3 || sts === 5) && (!refund.value || refund.value.refundSts === 3)
+})
 /**
  * 加载订单数据
  */
@@ -258,7 +307,86 @@ const loadOrderDetail = (orderNum) => {
       reduceAmount.value = data.reduceAmount
       total.value = data.total
       uni.hideLoading()
+      loadRefund(orderNum)
     })
+}
+
+const loadRefund = (orderNum) => {
+  http.request({
+    url: '/p/refund/byOrder',
+    method: 'GET',
+    data: { orderNumber: orderNum },
+    hasCatch: true
+  }).then(({ data }) => {
+    refund.value = data || null
+  }).catch(() => {
+    refund.value = null
+  })
+}
+
+const toRefundApply = () => {
+  uni.navigateTo({
+    url: '/pages/refund-apply/refund-apply?orderNum=' + orderNumber.value
+  })
+}
+
+const onCancelOrder = () => {
+  uni.showModal({
+    title: '',
+    content: '要取消此订单？',
+    success (res) {
+      if (res.confirm) {
+        http.request({
+          url: '/p/myOrder/cancel/' + orderNumber.value,
+          method: 'PUT',
+          data: {}
+        }).then(() => {
+          loadOrderDetail(orderNumber.value)
+        })
+      }
+    }
+  })
+}
+
+const normalPay = () => {
+  uni.showLoading({ mask: true })
+  http.request({
+    url: '/p/order/normalPay',
+    method: 'POST',
+    data: {
+      orderNumbers: orderNumber.value,
+      payType: 1
+    }
+  }).then(({ data }) => {
+    uni.hideLoading()
+    if (data && (data.paid === undefined || data.paid)) {
+      uni.navigateTo({
+        url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + orderNumber.value
+      })
+    } else {
+      uni.showToast({ title: '支付失败！', icon: 'none' })
+    }
+  }).catch(() => {
+    uni.hideLoading()
+  })
+}
+
+const onConfirmReceive = () => {
+  uni.showModal({
+    title: '',
+    content: '我已收到货？',
+    confirmColor: '#eb2444',
+    success (res) {
+      if (res.confirm) {
+        http.request({
+          url: '/p/myOrder/receipt/' + orderNumber.value,
+          method: 'PUT'
+        }).then(() => {
+          loadOrderDetail(orderNumber.value)
+        })
+      }
+    }
+  })
 }
 
 /**

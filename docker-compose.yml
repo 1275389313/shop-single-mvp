@@ -5,7 +5,7 @@
 # Usage:
 #   cp .env.example .env
 #   docker compose up -d
-# First boot imports backend/db/yami_shop.sql then backend/db/02-patch-phase1.sql.
+# First boot imports backend/db/yami_shop.sql then 02/03 patches.
 
 services:
   mysql:
@@ -27,6 +27,7 @@ services:
       - ./data/mysql:/var/lib/mysql
       - ./backend/db/yami_shop.sql:/docker-entrypoint-initdb.d/01-yami_shop.sql:ro
       - ./backend/db/02-patch-phase1.sql:/docker-entrypoint-initdb.d/02-patch-phase1.sql:ro
+      - ./backend/db/03-patch-phase2.sql:/docker-entrypoint-initdb.d/03-patch-phase2.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
       interval: 5s

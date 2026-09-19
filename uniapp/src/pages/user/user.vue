@@ -214,6 +214,16 @@
         </view>
         <view
           class="memu-item"
+          @tap="toRefundList"
+        >
+          <view class="i-name">
+            <image src="@/static/images/icon/toComment.png" />
+            <text>退款/售后</text>
+          </view>
+          <view class="arrowhead" />
+        </view>
+        <view
+          class="memu-item"
           @tap="toAddressList"
         >
           <view class="i-name">
@@ -290,6 +300,11 @@ const handleTips = () => {
     title: '该功能未开源'
   })
 }
+const toRefundList = () => {
+  uni.navigateTo({
+    url: '/pages/refund-list/refund-list'
+  })
+}
 const toAddressList = () => {
   uni.navigateTo({
     url: '/pages/delivery-address/delivery-address'
@@ -355,7 +370,9 @@ const logout = () => {
     .then(() => {
       util.removeTabBadge()
       uni.removeStorageSync('loginResult')
-      uni.removeStorageSync('token')
+      uni.removeStorageSync('Token')
+      uni.removeStorageSync('expiresTimeStamp')
+      uni.removeStorageSync('hadLogin')
       uni.showToast({
         title: '退出成功',
         icon: 'none'
