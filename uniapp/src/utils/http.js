@@ -146,14 +146,14 @@ const http = {
    */
   loginSuccess: (result, fn) => {
   // 保存登陆信息
-    wx.setStorageSync('loginResult', result)
+    uni.setStorageSync('loginResult', result)
     // 保存成功登录标识,token过期判断
-    wx.setStorageSync('hadLogin', true)
+    uni.setStorageSync('hadLogin', true)
     const expiresTimeStamp = result.expiresIn * 1000 / 2 + new Date().getTime()
     // 缓存token的过期时间
     uni.setStorageSync('expiresTimeStamp', expiresTimeStamp)
 
-    wx.setStorageSync('Token', result.accessToken) // 把token存入缓存，请求接口数据时要用
+    uni.setStorageSync('Token', result.accessToken) // 把token存入缓存，请求接口数据时要用
     if (fn) {
       fn()
     }

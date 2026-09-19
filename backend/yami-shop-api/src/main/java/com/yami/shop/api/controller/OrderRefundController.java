@@ -1,17 +1,21 @@
 package com.yami.shop.api.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yami.shop.bean.app.param.OrderRefundParam;
 import com.yami.shop.bean.model.OrderRefund;
 import com.yami.shop.common.response.ServerResponseEntity;
+import com.yami.shop.common.util.PageParam;
 import com.yami.shop.security.api.util.SecurityUtils;
 import com.yami.shop.service.OrderRefundService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -27,5 +31,19 @@ public class OrderRefundController {
     public ServerResponseEntity<OrderRefund> apply(@Valid @RequestBody OrderRefundParam param) {
         String userId = SecurityUtils.getUser().getUserId();
         return ServerResponseEntity.success(orderRefundService.apply(userId, param));
+    }
+
+    @GetMapping("/page")
+    @Operation(summary = "我的退款列表")
+    public ServerResponseEntity<IPage<OrderRefund>> page(PageParam<OrderRefund> page) {
+        String userId = SecurityUtils.getUser().getUserId();
+        return ServerResponseEntity.success(orderRefundService.pageByUser(userId, page));
+    }
+
+    @GetMapping("/byOrder")
+    @Operation(summary = "按订单号查询最近一笔退款（无则 data=null）")
+    public ServerResponseEntity<OrderRefund> byOrder(@RequestParam String orderNumber) {
+        String userId = SecurityUtils.getUser().getUserId();
+        return ServerResponseEntity.success(orderRefundService.getByOrderNumber(userId, orderNumber));
     }
 }

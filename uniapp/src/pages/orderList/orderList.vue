@@ -194,6 +194,15 @@
                 查看物流
               </text>
               <text
+                v-if="item.status==2 || item.status==3 || item.status==5"
+                class="button"
+                :data-ordernum="item.orderNumber"
+                hover-class="none"
+                @tap="toRefundApply"
+              >
+                申请退款
+              </text>
+              <text
                 v-if="item.status==3"
                 class="button warn"
                 :data-ordernum="item.orderNumber"
@@ -360,6 +369,15 @@ const normalPay = (e) => {
 const toOrderDetailPage = (e) => {
   uni.navigateTo({
     url: '/pages/order-detail/order-detail?orderNum=' + e.currentTarget.dataset.ordernum
+  })
+}
+
+/**
+ * 申请退款
+ */
+const toRefundApply = (e) => {
+  uni.navigateTo({
+    url: '/pages/refund-apply/refund-apply?orderNum=' + e.currentTarget.dataset.ordernum
   })
 }
 

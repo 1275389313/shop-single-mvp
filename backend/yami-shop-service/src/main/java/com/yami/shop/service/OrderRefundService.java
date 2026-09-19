@@ -17,5 +17,9 @@ public interface OrderRefundService extends IService<OrderRefund> {
 
     OrderRefund audit(Long shopId, OrderRefundAuditParam param);
 
-    IPage<OrderRefund> pageByShop(Long shopId, Integer refundSts, PageParam<OrderRefund> page);
+    IPage<OrderRefund> pageByShop(Long shopId, Integer refundSts, String orderNumber, PageParam<OrderRefund> page);
+
+    IPage<OrderRefund> pageByUser(String userId, PageParam<OrderRefund> page);
+
+    OrderRefund getByOrderNumber(String userId, String orderNumber);
 }

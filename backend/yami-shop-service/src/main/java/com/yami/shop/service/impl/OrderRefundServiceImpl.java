@@ -152,10 +152,27 @@ public class OrderRefundServiceImpl extends ServiceImpl<OrderRefundMapper, Order
     }
 
     @Override
-    public IPage<OrderRefund> pageByShop(Long shopId, Integer refundSts, PageParam<OrderRefund> page) {
+    public IPage<OrderRefund> pageByShop(Long shopId, Integer refundSts, String orderNumber, PageParam<OrderRefund> page) {
         return page(page, new LambdaQueryWrapper<OrderRefund>()
                 .eq(OrderRefund::getShopId, shopId)
                 .eq(refundSts != null, OrderRefund::getRefundSts, refundSts)
+                .like(StrUtil.isNotBlank(orderNumber), OrderRefund::getOrderNumber, orderNumber)
                 .orderByDesc(OrderRefund::getApplyTime));
+    }
+
+    @Override
+    public IPage<OrderRefund> pageByUser(String userId, PageParam<OrderRefund> page) {
+        return page(page, new LambdaQueryWrapper<OrderRefund>()
+                .eq(OrderRefund::getUserId, userId)
+                .orderByDesc(OrderRefund::getApplyTime));
+    }
+
+    @Override
+    public OrderRefund getByOrderNumber(String userId, String orderNumber) {
+        return getOne(new LambdaQueryWrapper<OrderRefund>()
+                .eq(OrderRefund::getUserId, userId)
+                .eq(OrderRefund::getOrderNumber, orderNumber)
+                .orderByDesc(OrderRefund::getApplyTime)
+                .last("limit 1"));
     }
 }

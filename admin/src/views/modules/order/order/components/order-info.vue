@@ -119,13 +119,13 @@
                       >
                       <div class="text-width">
                         <el-form-item label="收货人:">
-                          <span>{{ dataForm.userAddrOrder.receiver }}</span>
+                          <span>{{ dataForm.userAddrOrder?.receiver }}</span>
                         </el-form-item>
                         <el-form-item label="手机:">
-                          <span>{{ dataForm.userAddrOrder.mobile }}</span>
+                          <span>{{ dataForm.userAddrOrder?.mobile }}</span>
                         </el-form-item>
                         <el-form-item label="收货地址">
-                          <span>{{ dataForm.userAddrOrder.province }}{{ dataForm.userAddrOrder.city }}{{ dataForm.userAddrOrder.area }}{{ dataForm.userAddrOrder.addr }}</span>
+                          <span>{{ dataForm.userAddrOrder?.province }}{{ dataForm.userAddrOrder?.city }}{{ dataForm.userAddrOrder?.area }}{{ dataForm.userAddrOrder?.addr }}</span>
                         </el-form-item>
                       </div>
                     </div>
@@ -381,7 +381,7 @@ const devyAddRef = ref(null)
 const changeOrder = (orderNumber) => {
   devyVisible.value = true
   nextTick(() => {
-    devyAddRef.value?.init(orderNumber, dataForm.value.dvyId, dataFormRef.value?.dvyFlowId)
+    devyAddRef.value?.init(orderNumber, dataForm.value.dvyId, dataForm.value.dvyFlowId)
   })
 }
 </script>

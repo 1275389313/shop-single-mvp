@@ -68,6 +68,13 @@
         登录
       </button>
       <button
+        class="authorized-btn"
+        style="margin-top: 16rpx; background: #07c160;"
+        @tap="wxLogin"
+      >
+        微信登录
+      </button>
+      <button
         v-if="mockWx"
         class="authorized-btn"
         style="margin-top: 16rpx; background: #07c160;"
@@ -157,31 +164,61 @@ const toRegitser = () => {
 }
 
 /**
- * mock 微信登录：任意 code 即可换 token，无需真实 AppID
+ * 微信登录：DevTools / 真机走 uni.login 拿 code，后端 mock 时任意 code 即可换 token
  */
-const mockWxLogin = () => {
+const afterLogin = (data, toastTitle) => {
+  http.loginSuccess(data, () => {
+    uni.showToast({
+      title: toastTitle,
+      icon: 'none',
+      complete: () => {
+        setTimeout(() => {
+          uni.switchTab({
+            url: '/pages/index/index'
+          })
+        }, 1000)
+      }
+    })
+  })
+}
+
+const doWxLogin = (code, nickName) => {
   http.request({
     url: '/wx/login',
     method: 'post',
     data: {
-      code: 'dev-' + Date.now(),
-      nickName: '模拟微信用户'
+      code,
+      nickName: nickName || '微信用户'
     }
   }).then(({ data }) => {
-    http.loginSuccess(data, () => {
-      uni.showToast({
-        title: data.mock ? '模拟微信登录成功' : '登录成功',
-        icon: 'none',
-        complete: () => {
-          setTimeout(() => {
-            uni.switchTab({
-              url: '/pages/index/index'
-            })
-          }, 1000)
-        }
-      })
-    })
+    afterLogin(data, data.mock ? '模拟微信登录成功' : '登录成功')
   })
+}
+
+const wxLogin = () => {
+  uni.login({
+    provider: 'weixin',
+    success: (loginRes) => {
+      doWxLogin(loginRes.code || ('dev-' + Date.now()), '微信用户')
+    },
+    fail: () => {
+      if (mockWx.value) {
+        mockWxLogin()
+        return
+      }
+      uni.showToast({
+        title: '当前环境无法 wx.login，请用模拟微信登录或在微信开发者工具中打开',
+        icon: 'none'
+      })
+    }
+  })
+}
+
+/**
+ * mock 微信登录：任意 code 即可换 token，无需真实 AppID（H5 联调用）
+ */
+const mockWxLogin = () => {
+  doWxLogin('dev-' + Date.now(), '模拟微信用户')
 }
 
 /**

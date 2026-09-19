@@ -83,6 +83,20 @@
       }
     },
     {
+      "path": "pages/refund-apply/refund-apply",
+      "style": {
+        "navigationBarTitleText": "申请退款",
+        "navigationBarBackgroundColor": "#fff"
+      }
+    },
+    {
+      "path": "pages/refund-list/refund-list",
+      "style": {
+        "navigationBarTitleText": "退款/售后",
+        "navigationBarBackgroundColor": "#fff"
+      }
+    },
+    {
       "path": "pages/submit-order/submit-order",
       "style": {
         "backgroundTextStyle": "light",

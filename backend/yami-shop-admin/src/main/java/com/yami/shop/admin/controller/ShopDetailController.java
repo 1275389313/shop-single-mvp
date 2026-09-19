@@ -109,7 +109,7 @@ public class ShopDetailController {
 	 */
 	@PutMapping
 	@PreAuthorize("@pms.hasPermission('shop:shopDetail:update')")
-	public ServerResponseEntity<Void> update(@Valid ShopDetailParam shopDetailParam){
+	public ServerResponseEntity<Void> update(@RequestBody @Valid ShopDetailParam shopDetailParam){
 		Long shopId = currentShopId();
 		shopDetailParam.setShopId(shopId);
 		ShopDetail daShopDetail = shopDetailService.getShopDetailByShopId(shopId);
