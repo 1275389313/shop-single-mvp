@@ -39,6 +39,9 @@
             <result column="prod_count" jdbcType="INTEGER" property="prodCount"/>
             <result column="price" jdbcType="DECIMAL" property="price"/>
             <result column="sku_name" jdbcType="VARCHAR" property="skuName"/>
+            <result column="order_item_id" jdbcType="BIGINT" property="orderItemId"/>
+            <result column="prod_id" jdbcType="BIGINT" property="prodId"/>
+            <result column="comm_sts" jdbcType="INTEGER" property="commSts"/>
         </collection>
     </resultMap>
 
@@ -184,7 +187,7 @@
     </update>
 
     <update id="confirmOrder">
-        update tz_order set `status`=5,finally_time = NOW() where order_id in
+        update tz_order set `status`=4,finally_time = NOW() where order_id in
         <foreach collection="orders" item="order" open="(" close=")" separator=",">
             #{order.orderId}
         </foreach>
@@ -289,7 +292,8 @@
     </select>
 
     <select id="listMyOrderByUserIdAndStatus" resultMap="MyOrderMap">
-        SELECT o.actual_total,oi.pic,oi.price,oi.prod_name,oi.sku_name,oi.prod_count,o.status,o.order_number
+        SELECT o.actual_total,oi.pic,oi.price,oi.prod_name,oi.sku_name,oi.prod_count,o.status,o.order_number,
+               oi.order_item_id,oi.prod_id,oi.comm_sts
         FROM (
         SELECT * FROM tz_order temp
         WHERE temp.user_id = #{userId} and temp.delete_status = 0

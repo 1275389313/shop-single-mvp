@@ -389,6 +389,61 @@ rich-text {
     color: #fff;
   }
 }
+.comm-wrap {
+  margin-top: 16rpx;
+  background: #fff;
+  padding: 24rpx 30rpx 10rpx;
+}
+.comm-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+.comm-tit {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 600;
+}
+.comm-more {
+  font-size: 24rpx;
+  color: #999;
+}
+.comm-empty {
+  font-size: 26rpx;
+  color: #999;
+  padding: 20rpx 0 30rpx;
+}
+.comm-item {
+  padding: 16rpx 0;
+  border-top: 1rpx solid #f4f4f4;
+}
+.comm-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 24rpx;
+  color: #666;
+}
+.comm-score {
+  color: #f5a623;
+}
+.comm-content {
+  margin-top: 8rpx;
+  font-size: 28rpx;
+  color: #333;
+  line-height: 40rpx;
+}
+.comm-pics {
+  margin-top: 12rpx;
+  display: flex;
+  flex-wrap: wrap;
+  image {
+    width: 140rpx;
+    height: 140rpx;
+    margin-right: 12rpx;
+    margin-bottom: 8rpx;
+  }
+}
 .close {
   color: #aaa;
   border-radius: 12px;

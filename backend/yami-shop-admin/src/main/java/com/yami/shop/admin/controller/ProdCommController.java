@@ -91,7 +91,21 @@ public class ProdCommController {
     @PreAuthorize("@pms.hasPermission('prod:prodComm:update')" )
     public ServerResponseEntity<Boolean> updateById(@RequestBody @Valid ProdComm prodComm) {
         prodComm.setReplyTime(new Date());
+        if (StringUtils.isNotBlank(prodComm.getReplyContent())) {
+            prodComm.setReplySts(1);
+        }
         return ServerResponseEntity.success(prodCommService.updateById(prodComm));
+    }
+
+    /**
+     * Hide / show a review without rewriting the rest of the row.
+     */
+    @SysLog("审核商品评论")
+    @PutMapping("/status")
+    @PreAuthorize("@pms.hasPermission('prod:prodComm:update')" )
+    public ServerResponseEntity<Void> updateStatus(@RequestParam Long prodCommId, @RequestParam Integer status) {
+        prodCommService.updateStatus(prodCommId, status);
+        return ServerResponseEntity.success();
     }
 
     /**

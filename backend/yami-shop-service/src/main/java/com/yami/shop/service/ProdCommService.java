@@ -16,6 +16,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yami.shop.bean.app.dto.ProdCommDataDto;
 import com.yami.shop.bean.app.dto.ProdCommDto;
+import com.yami.shop.bean.app.param.ProdCommParam;
 import com.yami.shop.bean.model.ProdComm;
 
 
@@ -57,5 +58,15 @@ public interface ProdCommService extends IService<ProdComm> {
      * @return
      */
     IPage<ProdComm> getProdCommPage(Page page,ProdComm prodComm);
+
+    /**
+     * Buyer submits a review for a completed/received order item. Auto-publishes (status=1).
+     */
+    void saveBuyerReview(String userId, ProdCommParam param);
+
+    /**
+     * Admin hide / show. status: 1 visible, 0 pending, -1 hidden.
+     */
+    void updateStatus(Long prodCommId, Integer status);
 
 }

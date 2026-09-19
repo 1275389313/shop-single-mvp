@@ -22,4 +22,10 @@ import java.io.Serializable;
 @EqualsAndHashCode(callSuper = false)
 public class OrderItemDto extends ProductItemDto implements Serializable {
 
+    private Long orderItemId;
+
+    /**
+     * 0 未评价 1 已评价
+     */
+    private Integer commSts;
 }

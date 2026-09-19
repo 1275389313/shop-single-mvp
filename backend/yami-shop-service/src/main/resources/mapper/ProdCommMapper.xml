@@ -35,7 +35,7 @@
                count(CASE WHEN evaluate = 0 THEN 1 ELSE null END)     AS praise_number,
                count(CASE WHEN evaluate = 1 THEN 1 ELSE null END)     AS secondary_number,
                count(CASE WHEN evaluate = 2 THEN 1 ELSE null END)     AS negative_number,
-               count(CASE WHEN pics is not null THEN 1 ELSE null END) AS pic_number
+               count(CASE WHEN pics is not null AND pics != '' THEN 1 ELSE null END) AS pic_number
         FROM tz_prod_comm
         WHERE prod_id = #{prodId} and status = 1
     </select>
@@ -82,7 +82,7 @@
             and pc.evaluate = #{evaluate}
         </if>
         <if test="evaluate == 3">
-            and pc.pics is not null
+            and pc.pics is not null and pc.pics != ''
         </if>
         order by pc.rec_time desc
     </select>
@@ -130,6 +130,8 @@
         pc.rec_time,
         pc.reply_time,
         pc.evaluate,
+        pc.content,
+        pc.pics,
         u.nick_name,
         u.user_mobile,
         p.prod_name
@@ -145,6 +147,7 @@
                 and p.prod_name like concat('%',#{prodComm.prodName},'%')
             </if>
         </where>
+        order by pc.rec_time desc
     </select>
 
 </mapper>

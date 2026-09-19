@@ -79,6 +79,54 @@
         ...
       </view>
     </view>
+
+    <!-- 商品评价 -->
+    <view class="comm-wrap">
+      <view
+        class="comm-head"
+        @tap="toCommPage"
+      >
+        <text class="comm-tit">
+          评价 {{ commData.number || 0 }}
+        </text>
+        <text class="comm-more">
+          {{ commData.positiveRating != null ? commData.positiveRating + '%好评' : '' }} 查看全部
+        </text>
+      </view>
+      <view
+        v-if="!commList.length"
+        class="comm-empty"
+      >
+        暂无评价
+      </view>
+      <view
+        v-for="item in commList"
+        :key="item.prodCommId"
+        class="comm-item"
+      >
+        <view class="comm-meta">
+          <text>{{ item.isAnonymous === 1 ? '匿名用户' : (item.nickName || '用户') }}</text>
+          <text class="comm-score">
+            {{ starText(item.score) }}
+          </text>
+        </view>
+        <view class="comm-content">
+          {{ item.content }}
+        </view>
+        <view
+          v-if="picArr(item.pics).length"
+          class="comm-pics"
+        >
+          <image
+            v-for="(img, idx) in picArr(item.pics)"
+            :key="idx"
+            :src="img"
+            mode="aspectFill"
+            @tap.stop="previewPics(picArr(item.pics), idx)"
+          />
+        </view>
+      </view>
+    </view>
     <!-- 商品详情 -->
     <view class="prod-detail">
       <view>
@@ -255,6 +303,7 @@ onLoad((options) => {
   getProdInfo()
   // 查看用户是否关注
   getCollection()
+  loadComments()
 })
 
 const app = getApp()
@@ -264,6 +313,9 @@ const totalCartNum = ref(0)
  */
 onShow(() => {
   totalCartNum.value = app.globalData.totalCartCount
+  if (prodId) {
+    loadComments()
+  }
 })
 
 /**
@@ -590,6 +642,56 @@ const showSku = () => {
 }
 
 const commentShow = ref(false)
+
+const commData = ref({ number: 0, positiveRating: 0 })
+const commList = ref([])
+
+const loadComments = () => {
+  http.request({
+    url: '/prodComm/prodCommData',
+    method: 'GET',
+    data: { prodId }
+  }).then(({ data }) => {
+    commData.value = data || commData.value
+  })
+  http.request({
+    url: '/prodComm/prodCommPageByProd',
+    method: 'GET',
+    data: {
+      prodId,
+      evaluate: -1,
+      current: 1,
+      size: 2
+    }
+  }).then(({ data }) => {
+    commList.value = data?.records || []
+  })
+}
+
+const picArr = (pics) => {
+  if (!pics) {
+    return []
+  }
+  return String(pics).split(',').map(s => s.trim()).filter(Boolean)
+}
+
+const starText = (score) => {
+  const n = Number(score) || 0
+  return '★'.repeat(Math.min(5, Math.max(0, n)))
+}
+
+const previewPics = (urls, idx) => {
+  uni.previewImage({
+    current: urls[idx],
+    urls
+  })
+}
+
+const toCommPage = () => {
+  uni.navigateTo({
+    url: '/pages/prod-comm/prod-comm?prodId=' + prodId
+  })
+}
 
 const closePopup = () => {
   skuShow.value = false

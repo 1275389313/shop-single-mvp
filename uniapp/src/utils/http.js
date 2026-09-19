@@ -107,6 +107,45 @@ const http = {
       })
     })
   },
+  upload: function (filePath) {
+    return new Promise((resolve, reject) => {
+      uni.uploadFile({
+        url: import.meta.env.VITE_APP_BASE_API + '/p/file/upload',
+        filePath,
+        name: 'file',
+        header: {
+          Authorization: uni.getStorageSync('Token')
+        },
+        success: (res) => {
+          let data = res.data
+          if (typeof data === 'string') {
+            try {
+              data = JSON.parse(data)
+            } catch (e) {
+              reject(e)
+              return
+            }
+          }
+          if (data.code === '00000') {
+            resolve(data)
+          } else {
+            uni.showToast({
+              title: data.msg || '上传失败',
+              icon: 'none'
+            })
+            reject(data)
+          }
+        },
+        fail: (err) => {
+          uni.showToast({
+            title: '上传失败',
+            icon: 'none'
+          })
+          reject(err)
+        }
+      })
+    })
+  },
   getCartCount: () => {
     if (!uni.getStorageSync('Token')) {
       util.removeTabBadge()

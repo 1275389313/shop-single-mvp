@@ -28,4 +28,9 @@ public interface OrderItemService extends IService<OrderItem> {
 	 */
 	List<OrderItem> getOrderItemsByOrderNumber(String orderNumber);
 
+	/**
+	 * Drop cached order items after comm_sts / review updates.
+	 */
+	void removeCacheByOrderNumber(String orderNumber);
+
 }

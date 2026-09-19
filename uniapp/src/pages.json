@@ -139,6 +139,18 @@
       }
     },
     {
+      "path": "pages/prod-comm/prod-comm",
+      "style": {
+        "navigationBarTitleText": "商品评价"
+      }
+    },
+    {
+      "path": "pages/submit-comment/submit-comment",
+      "style": {
+        "navigationBarTitleText": "发表评价"
+      }
+    },
+    {
       "path": "pages/prod-classify/prod-classify",
       "style": {
         "onReachBottomDistance": 0

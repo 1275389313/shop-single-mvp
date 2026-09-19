@@ -73,7 +73,7 @@ mvn -pl yami-shop-admin -DskipTests spring-boot:run
 | `WX_PAY_MCH_ID` / `WX_PAY_API_KEY` / `WX_PAY_NOTIFY_URL` | 空 | 真实支付；回调 URL 必须 **HTTPS** |
 | `KUAIDI100_CUSTOMER` / `KUAIDI100_KEY` | 空 | 快递100即时查询；都空则返回 **模拟轨迹** |
 
-OSS：开源版接的是 **七牛**（`backend/yami-shop-common/src/main/resources/shop.properties`）。本地默认 `uploadType=1` 写 `/tmp/shop-mvp-upload/`。COS/S3 需自行加实现，配置钩子已在 `ImgUpload` / `Qiniu`。
+OSS：开源版接的是 **七牛**（`backend/yami-shop-common/src/main/resources/shop.properties`）。本地默认 `uploadType=1` 写 `/tmp/shop-mvp-upload/`，图片由 API 以 `http://127.0.0.1:8086/mall4j/img/` 提供。评价晒图走这条本地上传，**不需要腾讯云 COS 密钥**。COS/S3 需自行加实现，配置钩子已在 `ImgUpload` / `Qiniu`。
 
 管理端账号（SQL 预置）：**admin / 123456**。登录后请改密。
 
@@ -151,6 +151,7 @@ pnpm dev:h5          # H5 联调（登录页点「模拟微信登录」）
    | 结算 | 提交订单（选地址，选优惠券，看运费） | `POST /p/order/confirm`（`couponIds` 为用户券 ID）→ `POST /p/order/submit`（核销） |
    | 支付 | 自动调 mock 支付 | `POST /p/order/normalPay`（当场 `status=2`） |
    | 订单 | 订单列表 / 详情 | `/p/myOrder/**`；详情可 **确认收货**、**查看物流** |
+   | 评价晒图 | 确认收货后「评价晒图」 | `POST /p/file/upload`、`POST /p/prodComm`；商品详情可见 |
    | 退款申请 | 订单详情 / 列表「申请退款」 | `POST /p/refund/apply` |
    | 退货物流 | 售后页「填写退货物流」 | `PUT /p/refund/express`；填单号后可 **查看退货轨迹** |
    | 地址 | 我的 → 收货地址 | `/p/address/**` |
@@ -178,7 +179,7 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 1. 打开登录页，点 **微信登录** 或 **模拟微信登录**（`POST /wx/login`，mock 时 `code` 任意）
 2. 加购 → 提交订单（`POST /p/order/submit`）→ 前端会调 `POST /p/order/normalPay`
 3. 订单变为待发货（status=2）。也可用 `POST /notice/pay/mock` 按 `payNo` 再回调一次，**幂等**
-4. 管理端发货 → 用户确认收货。发货后买卖双方都可查物流轨迹（默认模拟）
+4. 管理端发货 → 用户确认收货（订单进入 **待评价**）→ 评价晒图（可选图，立刻出现在商品详情）
 5. 用户申请退款：
    - **仅退款**：管理端同意 → 立即 mock 退款成功
    - **退货退款**：管理端同意 → 买家填写物流（`PUT /p/refund/express`）→ 可查退货轨迹 → 管理端确认收货（`PUT /order/refund/receive`）→ mock 退款成功
@@ -196,7 +197,8 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 - 账号密码登录、mock 微信登录（开发者工具 `uni.login` 或「模拟微信登录」）
 - 首页轮播/分类/标签、分类与搜索、SPU/SKU/库存、购物车
 - 下单、固定/满额运费模板（管理端运费模板）、mock 支付
-- 订单列表/详情、取消未支付、确认收货、管理端发货
+- 订单列表/详情、取消未支付、确认收货（待评价）、管理端发货
+- 评价晒图：确认收货后评分+文字+可选图，商品详情展示；管理端「商品 → 评论管理」可隐藏
 - 物流轨迹：订单发货单号 / 退货快递单号；默认模拟时间轴，可插快递100密钥
 - 未支付超时关单 + 回库存（Spring 定时，不依赖 xxl-job）
 - 支付回调幂等
@@ -208,8 +210,7 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 明确未完成或薄弱：
 
 - **真实微信登录**（jscode2session）与 **真实微信支付/退款**（WxJava 在开源版基本被注释）；本阶段刻意保持 mock
-- 确认收货后上游把状态写成 5（成功），待评价(4) 与评价闭环不完整
-- 对象存储目前是七牛钩子，**腾讯云 COS** 需自写；本地文件上传即可跑通
+- 对象存储目前是七牛钩子，**腾讯云 COS** 需自写；评价与后台图默认本地上传即可跑通
 - 管理端验证码依赖 anji captcha 缓存，环境不齐时可能影响登录（见上游文档）
 - 生产级 HTTPS、域名、小程序审核、支付商户号均未配置
 - 我的页「分销中心 / 消息 / 足迹」仍是上游未开源占位 toast
@@ -226,9 +227,10 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 | 支付 | `SHOP_MVP_MOCK_PAY=true`，`normalPay` 当场已付 | 微信预下单 + 收银台 + HTTPS 回调验签 |
 | 退款 | 审核/确认收货只改库，`return_money_sts=1` | 微信退款 API + 退款回调；`out_refund_no` 仍为空 |
 | 物流轨迹 | 无 `KUAIDI100_CUSTOMER`/`KEY` 时按发货/寄回时间生成模拟时间轴（会标明 mock） | 填快递100 customer+key 后走即时查询；微信物流助手未做 |
+| 评价晒图 | 本地上传 + 可选占位图，评价立刻上架 | 七牛/COS 真实 CDN；人工审核流可把默认 status 改回 0 |
 | 订阅消息 | 无 | 模板 id 配置钩子（P1 TODO） |
 
-**P1 后续（本轮不做，仅占位）：** 带图评价、库存预警、简单仪表盘、订阅消息配置钩子。
+**P1 后续（本轮不做，仅占位）：** 库存预警、简单仪表盘、订阅消息配置钩子。
 
 ## 优惠券怎么用（P1）
 
@@ -265,6 +267,24 @@ H5 联调：`pnpm dev:h5`（默认占 80 端口，需权限）。H5 没有 `wx.l
 uni-app：订单列表/详情「查看物流」；售后详情/列表在已填退货单号后「查看轨迹」。管理端订单详情、退款详情/确认收货弹窗展示时间轴。
 
 未发货或未填退货单号时返回空 `data` 和说明，不报错。
+
+## 评价晒图怎么用（P1）
+
+复用 mall4j 的 `tz_prod_comm` / `ProdCommController`，补上登录鉴权、收货校验和本地晒图。
+
+1. mock 支付 → 管理端发货 → 买家确认收货，订单变为 **待评价**（status=4）。历史已写成成功(5) 且未评的商品仍可评。
+2. 订单详情/列表点 **评价晒图**：1–5 分 + 文字 + 最多 9 张图（可点「使用占位图」）。`POST /p/prodComm`。
+3. 新评价 **立刻上架**（`status=1`），商品详情和「查看全部」能看到分数、内容和图片。
+4. 图片走本地上传 `POST /p/file/upload`（`/tmp/shop-mvp-upload/`，`GET /mall4j/img/**`），**不要配 COS/七牛真实密钥**。
+5. 管理端「商品 → 评论管理」（开源 mall4j 已有菜单）：**隐藏** 后商品页不再展示（status=-1），**显示** 可恢复。
+
+| 端 | 方法 | 路径 |
+| --- | --- | --- |
+| 买家发表 | POST | `/p/prodComm` |
+| 买家上传 | POST | `/p/file/upload` |
+| 占位图 | POST | `/p/file/placeholder` |
+| 商品评价 | GET | `/prodComm/prodCommPageByProd?prodId=&evaluate=-1` |
+| 管理隐藏 | PUT | `/prod/prodComm/status?prodCommId=&status=-1` |
 
 ## 开发约定
 

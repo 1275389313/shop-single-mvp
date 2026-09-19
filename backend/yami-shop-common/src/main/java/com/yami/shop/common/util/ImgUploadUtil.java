@@ -47,15 +47,23 @@ public class ImgUploadUtil {
 
     public String upload(MultipartFile img, String fileName) {
         String filePath = imgUpload.getImagePath();
-        File file = new File(filePath + fileName);
-        if (!file.exists()) {
-            boolean result = file.mkdirs();
-            if (!result) {
-                throw new YamiShopBindException("创建目录：" + filePath + "失败");
+        File dest = new File(filePath, fileName).getAbsoluteFile();
+        File parent = dest.getParentFile();
+        if (parent != null && !parent.exists()) {
+            boolean result = parent.mkdirs();
+            if (!result && !parent.exists()) {
+                throw new YamiShopBindException("创建目录：" + parent.getAbsolutePath() + "失败");
+            }
+        }
+        if (dest.exists() && dest.isDirectory()) {
+            // leftover of the old mkdirs-on-filename bug
+            boolean deleted = dest.delete();
+            if (!deleted) {
+                throw new YamiShopBindException("图片上传失败");
             }
         }
         try {
-            img.transferTo(file);
+            img.transferTo(dest);
         } catch (IOException e) {
             throw new YamiShopBindException("图片上传失败");
         }

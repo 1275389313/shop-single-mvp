@@ -31,6 +31,13 @@
         待收货
       </text>
       <text
+        data-sts="4"
+        :class="sts==4?'on':''"
+        @tap="onStsTap"
+      >
+        待评价
+      </text>
+      <text
         data-sts="5"
         :class="sts==5?'on':''"
         @tap="onStsTap"
@@ -59,7 +66,7 @@
                 :class="'order-sts  ' + (item.status==1?'red':'') + '  ' + ((item.status==5||item.status==6)?'gray':'')"
               >
                 {{
-                  item.status == 1 ? '待支付' : (item.status == 2 ? '待发货' : (item.status == 3 ? '待收货' : (item.status == 5 ? '已完成' : '已取消')))
+                  item.status == 1 ? '待支付' : (item.status == 2 ? '待发货' : (item.status == 3 ? '待收货' : (item.status == 4 ? '待评价' : (item.status == 5 ? '已完成' : '已取消'))))
                 }}
               </text>
 
@@ -211,6 +218,15 @@
               >
                 确认收货
               </text>
+              <text
+                v-if="item.status==4 || (item.status==5 && hasUnreviewed(item))"
+                class="button warn"
+                :data-ordernum="item.orderNumber"
+                hover-class="none"
+                @tap="toReviewOrder"
+              >
+                评价晒图
+              </text>
             </view>
           </view>
         </view>
@@ -224,6 +240,7 @@
 const wxs = number()
 
 const sts = ref(0)
+const firstLoad = ref(true)
 /**
  * 生命周期函数--监听页面加载
  */
@@ -234,6 +251,13 @@ onLoad((options) => {
   } else {
     loadOrderData(0, 1)
   }
+})
+
+onShow(() => {
+  if (!firstLoad.value) {
+    loadOrderData(sts.value, 1)
+  }
+  firstLoad.value = false
 })
 
 const current = ref(1)
@@ -379,6 +403,31 @@ const toRefundApply = (e) => {
   uni.navigateTo({
     url: '/pages/refund-apply/refund-apply?orderNum=' + e.currentTarget.dataset.ordernum
   })
+}
+
+const hasUnreviewed = (item) => {
+  return (item.orderItemDtos || []).some(prod => prod.commSts !== 1)
+}
+
+const toReviewOrder = (e) => {
+  const ordernum = e.currentTarget.dataset.ordernum
+  const order = list.value.find(o => o.orderNumber === ordernum)
+  const prod = order && (order.orderItemDtos || []).find(p => p.commSts !== 1)
+  if (prod && prod.orderItemId) {
+    let url = '/pages/submit-comment/submit-comment?orderItemId=' + prod.orderItemId
+      + '&prodId=' + (prod.prodId || '')
+    if (prod.prodName) {
+      url += '&prodName=' + encodeURIComponent(prod.prodName)
+    }
+    if (prod.pic) {
+      url += '&pic=' + encodeURIComponent(prod.pic)
+    }
+    uni.navigateTo({ url })
+  } else {
+    uni.navigateTo({
+      url: '/pages/order-detail/order-detail?orderNum=' + ordernum
+    })
+  }
 }
 
 /**

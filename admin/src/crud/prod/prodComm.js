@@ -10,6 +10,7 @@ export const tableOption = {
   addBtn: false,
   editBtn: false,
   delBtn: false,
+  menuWidth: 320,
   column: [
     {
       label: '商品名',
@@ -37,6 +38,11 @@ export const tableOption = {
           value: ''
         }
       ]
+    },
+    {
+      label: '评价内容',
+      prop: 'content',
+      overHidden: true
     },
     {
       label: '评价得分',

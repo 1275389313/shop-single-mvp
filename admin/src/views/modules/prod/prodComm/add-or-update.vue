@@ -27,16 +27,16 @@
           label="评论图片"
           prop="userName"
         >
-          <div v-if="!dataForm.pics?.length">
+          <div v-if="!picList.length">
             无
           </div>
           <div v-else>
             <img
-              v-for="item in dataForm.pics"
+              v-for="item in picList"
               :key="item"
               alt=""
-              max-width="100%"
-              :src="dialogImageUrl + item"
+              style="max-width: 120px; max-height: 120px; margin-right: 8px;"
+              :src="item"
             >
           </div>
         </el-form-item>
@@ -190,6 +190,16 @@ defineExpose({ init })
 
 const visible = ref(false)
 const dataFormRef = ref(null)
+const picList = computed(() => {
+  const pics = dataForm.value?.pics
+  if (!pics) {
+    return []
+  }
+  if (Array.isArray(pics)) {
+    return pics.filter(Boolean)
+  }
+  return String(pics).split(',').map(s => s.trim()).filter(Boolean)
+})
 /**
  * 表单提交
  */
