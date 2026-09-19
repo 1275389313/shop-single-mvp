@@ -1,6 +1,53 @@
 <template>
   <div class="mod-home">
     <el-card
+      v-if="isAuth('order:dashboard:info')"
+      shadow="never"
+      class="dashboard-home"
+    >
+      <div class="dashboard-home__head">
+        <div>
+          <div class="dashboard-home__title">
+            数据看板
+          </div>
+          <p class="dashboard-home__hint">
+            今日 / 近7日 / 近30日 GMV 与订单。开源 mall4j 无统计接口，按本店订单表汇总。
+            <el-tag
+              v-if="dashboard?.mockPay"
+              type="warning"
+              size="small"
+            >
+              mock 支付
+            </el-tag>
+          </p>
+        </div>
+        <el-button
+          type="primary"
+          @click="goDashboard"
+        >
+          查看明细
+        </el-button>
+      </div>
+      <el-row :gutter="16">
+        <el-col
+          v-for="item in dashboardCards"
+          :key="item.key"
+          :xs="24"
+          :sm="12"
+          :md="6"
+        >
+          <div class="dashboard-home__metric">
+            <div class="dashboard-home__metric-label">
+              {{ item.title }}
+            </div>
+            <div class="dashboard-home__metric-value">
+              {{ item.text }}
+            </div>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+    <el-card
       v-if="isAuth('prod:stockAlert:page')"
       shadow="never"
       class="stock-alert-home"
@@ -162,11 +209,50 @@ const router = useRouter()
 const lowStockCount = ref(0)
 const globalThreshold = ref(10)
 
+const dashboard = ref(null)
+
+const formatMoney = (n) => {
+  return Number(n || 0).toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
+}
+
+const rangeOf = (code) => {
+  return (dashboard.value?.ranges || []).find(item => item.code === code) || {}
+}
+
+const dashboardCards = computed(() => {
+  const today = rangeOf('TODAY')
+  const week = rangeOf('LAST_7D')
+  const month = rangeOf('LAST_30D')
+  const all = rangeOf('ALL')
+  return [
+    { key: 'today', title: '今日 GMV / 已付单', text: `¥${formatMoney(today.gmv)} · ${today.paidOrderCount || 0} 单` },
+    { key: 'week', title: '近7日 GMV / 已付单', text: `¥${formatMoney(week.gmv)} · ${week.paidOrderCount || 0} 单` },
+    { key: 'month', title: '近30日 GMV / 已付单', text: `¥${formatMoney(month.gmv)} · ${month.paidOrderCount || 0} 单` },
+    { key: 'all', title: '累计 GMV / 待付款', text: `¥${formatMoney(all.gmv)} · 待付 ${all.unpaidOrderCount || 0}` }
+  ]
+})
+
+const goDashboard = () => {
+  router.push('/order/dashboard')
+}
+
 const goStockAlert = () => {
   router.push('/prod/stockAlert')
 }
 
 onMounted(() => {
+  if (isAuth('order:dashboard:info')) {
+    http({
+      url: http.adornUrl('/order/dashboard'),
+      method: 'get',
+      params: http.adornParams()
+    }).then(({ data }) => {
+      dashboard.value = data
+    }).catch(() => {})
+  }
   if (!isAuth('prod:stockAlert:page')) {
     return
   }
@@ -187,8 +273,38 @@ onMounted(() => {
 .mod-home {
   line-height: 1.5;
 }
+.dashboard-home,
 .stock-alert-home {
   margin-bottom: 20px;
+}
+.dashboard-home__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.dashboard-home__title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.dashboard-home__hint {
+  margin: 6px 0 0;
+  color: #909399;
+  font-size: 13px;
+}
+.dashboard-home__metric {
+  padding: 8px 0 4px;
+}
+.dashboard-home__metric-label {
+  color: #909399;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.dashboard-home__metric-value {
+  font-size: 18px;
+  font-weight: 600;
 }
 .stock-alert-home__row {
   display: flex;

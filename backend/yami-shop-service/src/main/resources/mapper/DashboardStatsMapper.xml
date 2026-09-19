@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yami.shop.dao.DashboardStatsMapper">
+
+    <select id="aggregateCreated" resultType="com.yami.shop.bean.dto.DashboardAggRow">
+        SELECT
+            COUNT(*) AS orderCount,
+            IFNULL(SUM(CASE WHEN o.status = 1 THEN 1 ELSE 0 END), 0) AS unpaidOrderCount,
+            IFNULL(SUM(CASE WHEN o.status = 6 THEN 1 ELSE 0 END), 0) AS closedOrderCount,
+            IFNULL(SUM(CASE WHEN o.status = 1 THEN o.actual_total ELSE 0 END), 0) AS unpaidAmount
+        FROM tz_order o
+        WHERE o.shop_id = #{shopId}
+          AND o.create_time &gt;= #{startTime}
+          AND o.create_time &lt; #{endTime}
+    </select>
+
+    <select id="aggregatePaid" resultType="com.yami.shop.bean.dto.DashboardAggRow">
+        SELECT
+            COUNT(*) AS paidOrderCount,
+            IFNULL(SUM(o.actual_total), 0) AS gmv
+        FROM tz_order o
+        WHERE o.shop_id = #{shopId}
+          AND o.is_payed = 1
+          AND o.pay_time IS NOT NULL
+          AND o.pay_time &gt;= #{startTime}
+          AND o.pay_time &lt; #{endTime}
+    </select>
+
+    <select id="aggregateRefunded" resultType="com.yami.shop.bean.dto.DashboardAggRow">
+        SELECT
+            COUNT(*) AS refundCount,
+            IFNULL(SUM(r.refund_amount), 0) AS refundAmount
+        FROM tz_order_refund r
+        WHERE r.shop_id = #{shopId}
+          AND r.return_money_sts = 1
+          AND r.refund_time IS NOT NULL
+          AND r.refund_time &gt;= #{startTime}
+          AND r.refund_time &lt; #{endTime}
+    </select>
+
+    <select id="aggregatePendingRefund" resultType="com.yami.shop.bean.dto.DashboardAggRow">
+        SELECT
+            COUNT(*) AS pendingRefundCount,
+            IFNULL(SUM(r.refund_amount), 0) AS pendingRefundAmount
+        FROM tz_order_refund r
+        WHERE r.shop_id = #{shopId}
+          AND r.return_money_sts = 0
+          AND r.apply_time &gt;= #{startTime}
+          AND r.apply_time &lt; #{endTime}
+    </select>
+
+    <select id="listPaidDaily" resultType="com.yami.shop.bean.dto.DashboardDailyDto">
+        SELECT
+            DATE_FORMAT(o.pay_time, '%Y-%m-%d') AS statDate,
+            COUNT(*) AS paidOrderCount,
+            IFNULL(SUM(o.actual_total), 0) AS gmv
+        FROM tz_order o
+        WHERE o.shop_id = #{shopId}
+          AND o.is_payed = 1
+          AND o.pay_time IS NOT NULL
+          AND o.pay_time &gt;= #{startTime}
+          AND o.pay_time &lt; #{endTime}
+        GROUP BY DATE_FORMAT(o.pay_time, '%Y-%m-%d')
+        ORDER BY statDate
+    </select>
+
+    <select id="listRefundDaily" resultType="com.yami.shop.bean.dto.DashboardDailyDto">
+        SELECT
+            DATE_FORMAT(r.refund_time, '%Y-%m-%d') AS statDate,
+            COUNT(*) AS refundCount,
+            IFNULL(SUM(r.refund_amount), 0) AS refundAmount
+        FROM tz_order_refund r
+        WHERE r.shop_id = #{shopId}
+          AND r.return_money_sts = 1
+          AND r.refund_time IS NOT NULL
+          AND r.refund_time &gt;= #{startTime}
+          AND r.refund_time &lt; #{endTime}
+        GROUP BY DATE_FORMAT(r.refund_time, '%Y-%m-%d')
+        ORDER BY statDate
+    </select>
+</mapper>
