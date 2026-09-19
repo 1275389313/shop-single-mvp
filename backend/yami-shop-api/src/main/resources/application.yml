@@ -40,3 +40,19 @@ sa-token:
   token-style: uuid
   # 是否输出操作日志
   is-log: false
+
+# Phase-1 MVP: mock WeChat + local order jobs. Override with env vars.
+shop-mvp:
+  mock:
+    wechat-login: ${SHOP_MVP_MOCK_WECHAT_LOGIN:true}
+    pay: ${SHOP_MVP_MOCK_PAY:true}
+  order:
+    auto-close-enabled: ${SHOP_MVP_ORDER_AUTO_CLOSE:true}
+    auto-close-minutes: ${SHOP_MVP_ORDER_AUTO_CLOSE_MINUTES:30}
+    auto-confirm-days: ${SHOP_MVP_ORDER_AUTO_CONFIRM_DAYS:15}
+  wx:
+    app-id: ${WX_APP_ID:}
+    app-secret: ${WX_APP_SECRET:}
+    pay-mch-id: ${WX_PAY_MCH_ID:}
+    pay-api-key: ${WX_PAY_API_KEY:}
+    pay-notify-url: ${WX_PAY_NOTIFY_URL:}

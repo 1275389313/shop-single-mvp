@@ -69,7 +69,14 @@ public class FileUploadConfig {
      */
     @Bean
     public Auth auth() {
-        return Auth.create(qiniu.getAccessKey(), qiniu.getSecretKey());
+        String accessKey = qiniu.getAccessKey();
+        String secretKey = qiniu.getSecretKey();
+        if (accessKey == null || accessKey.isBlank() || secretKey == null || secretKey.isBlank()) {
+            // Local upload (uploadType=1) still constructs these beans; real Qiniu keys go in shop.properties
+            accessKey = "local-dev-placeholder";
+            secretKey = "local-dev-placeholder";
+        }
+        return Auth.create(accessKey, secretKey);
     }
 
     /**

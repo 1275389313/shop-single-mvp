@@ -1,19 +1,18 @@
-# 七牛云 / 对象存储占位（不要提交真实密钥）
+# Copy to shop.properties (already present with local-dev placeholders).
+# Never commit real Qiniu/COS/SMS keys.
+
 shop.qiniu.resourcesUrl=https://img.example.com/
 shop.qiniu.accessKey=local-dev-placeholder
 shop.qiniu.secretKey=local-dev-placeholder
 shop.qiniu.bucket=local-dev
-# 具体查看 QiniuZone.java
 shop.qiniu.zone=HUA_NAN
 
 shop.aLiDaYu.accessKeyId=
 shop.aLiDaYu.accessKeySecret=
 shop.aLiDaYu.signName=
 
-# 本地开发默认值，生产务必替换
 shop.tokenAesKey=q5e6w6w9f4q497te
 
-# 1=本地上传 2=七牛。本地默认走本地磁盘，避免没有 OSS 密钥时上传失败
 shop.imgUpload.imagePath=/tmp/shop-mvp-upload/
 shop.imgUpload.uploadType=1
 shop.imgUpload.resourceUrl=http://localhost:8085/mall4j/img/

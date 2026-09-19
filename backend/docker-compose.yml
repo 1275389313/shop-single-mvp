@@ -1,3 +1,5 @@
+# Prefer the repo-root docker-compose.yml (MySQL + Redis only).
+# This file is upstream mall4j's full stack compose; db/Dockerfile is not vendored here.
 version: '3'
 services:
   mall4j-mysql:
