@@ -51,6 +51,16 @@ public class ShopMvpProperties {
          * Public HTTPS notify URL for real WeChat pay callbacks.
          */
         private String payNotifyUrl = "";
+        /**
+         * Subscribe-message template IDs. Empty = skip send. Not secrets.
+         * Sys config keys WX_SUBSCRIBE_PAY_TEMPLATE_ID / WX_SUBSCRIBE_SHIP_TEMPLATE_ID override when set.
+         */
+        private String subscribePayTemplateId = "";
+        private String subscribeShipTemplateId = "";
+        /**
+         * WeChat subscribe send miniprogram_state: developer / trial / formal.
+         */
+        private String subscribeMiniprogramState = "developer";
     }
 
     /**

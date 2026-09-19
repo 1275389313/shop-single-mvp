@@ -12,12 +12,14 @@ package com.yami.shop.service.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateTime;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yami.shop.bean.app.dto.OrderCountData;
 import com.yami.shop.bean.app.dto.ShopCartOrderMergerDto;
 import com.yami.shop.bean.event.CancelOrderEvent;
+import com.yami.shop.bean.event.DeliveryOrderEvent;
 import com.yami.shop.bean.event.ReceiptOrderEvent;
 import com.yami.shop.bean.event.SubmitOrderEvent;
 import com.yami.shop.bean.model.Order;
@@ -99,6 +101,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional(rollbackFor = Exception.class)
     public void delivery(Order order) {
         orderMapper.updateById(order);
+        Order persisted = null;
+        if (order != null && order.getOrderId() != null) {
+            persisted = orderMapper.selectById(order.getOrderId());
+        }
+        if (persisted == null && order != null && StrUtil.isNotBlank(order.getOrderNumber())) {
+            persisted = orderMapper.getOrderByOrderNumber(order.getOrderNumber());
+        }
+        if (persisted != null) {
+            eventPublisher.publishEvent(new DeliveryOrderEvent(persisted));
+        }
     }
 
     @Override

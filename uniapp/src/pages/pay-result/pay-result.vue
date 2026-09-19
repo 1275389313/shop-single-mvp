@@ -55,6 +55,7 @@
 </template>
 
 <script setup>
+import { prefetchSubscribeTmplIds, requestOrderSubscribe } from '@/utils/subscribe-message.js'
 const sts = ref(0)
 const orderNumbers = ref('')
 /**
@@ -63,6 +64,7 @@ const orderNumbers = ref('')
 onLoad((options) => {
   sts.value = options.sts
   orderNumbers.value = options.orderNumbers
+  prefetchSubscribeTmplIds()
 })
 
 const toOrderList = () => {
@@ -76,42 +78,44 @@ const toIndex = () => {
   })
 }
 const payAgain = () => {
-  uni.showLoading({
-    mask: true
-  })
-  http.request({
-    url: '/p/order/pay',
-    method: 'POST',
-    data: {
-      payType: 1,
-      orderNumbers: orderNumbers.value
-    }
-  })
-    .then(({ data }) => {
-      uni.hideLoading()
-      if (data && (data.paid || data.mock)) {
-        uni.redirectTo({
-          url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + orderNumbers.value
-        })
-        return
+  requestOrderSubscribe().then(() => {
+    uni.showLoading({
+      mask: true
+    })
+    http.request({
+      url: '/p/order/pay',
+      method: 'POST',
+      data: {
+        payType: 1,
+        orderNumbers: orderNumbers.value
       }
-      if (!data || !data.timeStamp) {
-        uni.showToast({ title: '请使用模拟支付或接入真实微信支付', icon: 'none' })
-        return
-      }
-      uni.requestPayment({
-        timeStamp: data.timeStamp,
-        nonceStr: data.nonceStr,
-        package: data.packageValue,
-        signType: data.signType,
-        paySign: data.paySign,
-        success: () => {
+    })
+      .then(({ data }) => {
+        uni.hideLoading()
+        if (data && (data.paid || data.mock)) {
           uni.redirectTo({
             url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + orderNumbers.value
           })
+          return
         }
+        if (!data || !data.timeStamp) {
+          uni.showToast({ title: '请使用模拟支付或接入真实微信支付', icon: 'none' })
+          return
+        }
+        uni.requestPayment({
+          timeStamp: data.timeStamp,
+          nonceStr: data.nonceStr,
+          package: data.packageValue,
+          signType: data.signType,
+          paySign: data.paySign,
+          success: () => {
+            uni.redirectTo({
+              url: '/pages/pay-result/pay-result?sts=1&orderNumbers=' + orderNumbers.value
+            })
+          }
+        })
       })
-    })
+  })
 }
 </script>
 

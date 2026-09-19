@@ -1,5 +1,12 @@
 <template>
   <div class="mod-config">
+    <el-alert
+      title="小程序订阅消息模板 ID 填 WX_SUBSCRIBE_PAY_TEMPLATE_ID（支付成功）和 WX_SUBSCRIBE_SHIP_TEMPLATE_ID（发货通知）。留空则支付/发货只打日志不发送，不需要 AppSecret。不要把 AppSecret 写进参数值。"
+      type="info"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 12px"
+    />
     <avue-crud
       ref="crudRef"
       :page="page"

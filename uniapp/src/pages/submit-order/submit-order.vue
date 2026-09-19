@@ -312,6 +312,7 @@
 
 <script setup>
 import Coupon from '@/components/coupon/coupon.vue'
+import { prefetchSubscribeTmplIds, requestOrderSubscribe } from '@/utils/subscribe-message.js'
 
 const wxs = number()
 let orderEntry = '0' // 订单入口 0购物车 1立即购买
@@ -327,6 +328,7 @@ const userAddr = ref(null)
  * 生命周期函数--监听页面显示
  */
 onShow(() => {
+  prefetchSubscribeTmplIds()
   const pages = getCurrentPages()
   const currPage = pages[pages.length - 1]
   if (currPage.selAddress === 'yes') {
@@ -440,7 +442,8 @@ const toPay = () => {
     })
     return
   }
-  submitOrder()
+  // Must run in this tap: empty tmplIds no-op on H5 / mock.
+  requestOrderSubscribe().then(() => submitOrder())
 }
 
 const remarks = ref('')
