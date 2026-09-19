@@ -1,0 +1,2 @@
+# Example / copy of application-dev.yml. Real secrets belong in env vars or an untracked file.
+# See root .env.example and backend/yami-shop-admin/src/main/resources/application-dev.yml

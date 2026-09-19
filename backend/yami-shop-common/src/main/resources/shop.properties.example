@@ -1,0 +1,18 @@
+# Copy to shop.properties (already present with local-dev placeholders).
+# Never commit real Qiniu/COS/SMS keys.
+
+shop.qiniu.resourcesUrl=https://img.example.com/
+shop.qiniu.accessKey=local-dev-placeholder
+shop.qiniu.secretKey=local-dev-placeholder
+shop.qiniu.bucket=local-dev
+shop.qiniu.zone=HUA_NAN
+
+shop.aLiDaYu.accessKeyId=
+shop.aLiDaYu.accessKeySecret=
+shop.aLiDaYu.signName=
+
+shop.tokenAesKey=q5e6w6w9f4q497te
+
+shop.imgUpload.imagePath=/tmp/shop-mvp-upload/
+shop.imgUpload.uploadType=1
+shop.imgUpload.resourceUrl=http://localhost:8085/mall4j/img/
